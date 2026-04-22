@@ -26,10 +26,7 @@
       pointer-events: none; z-index: 0;
     }
 
-    /* Layout tổng */
     .app { position: relative; z-index: 1; display: flex; gap: 16px; width: 100%; max-width: 960px; align-items: flex-start; }
-
-    /* Cột trái: video + controls */
     .left { display: flex; flex-direction: column; gap: 14px; flex: 1; min-width: 0; }
 
     .label { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
@@ -52,7 +49,8 @@
     .badge.live .dot { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pdot 1.5s ease-in-out infinite; }
     @keyframes pdot { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-    .controls { display: flex; gap: 10px; }
+    /* Controls row — giờ có thêm mic button */
+    .controls { display: flex; gap: 10px; align-items: center; }
     button { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; border: none; border-radius: 12px; padding: 11px 20px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
     #btn-start { background: var(--accent); color: #fff; box-shadow: 0 4px 20px rgba(124,109,250,0.35); }
     #btn-start:hover { background: #6a5ce8; transform: translateY(-1px); }
@@ -61,12 +59,45 @@
     #btn-stop:hover { background: rgba(248,113,113,0.25); }
     #btn-stop:disabled { opacity: 0.3; cursor: not-allowed; }
 
+    /* Mic button */
+    #btn-mic {
+      width: 44px; height: 44px; padding: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+      transition: all 0.2s;
+    }
+    #btn-mic:disabled { opacity: 0.3; cursor: not-allowed; }
+    #btn-mic:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+    /* Trạng thái đang nói — mic active */
+    #btn-mic.active {
+      background: rgba(232,121,160,0.15);
+      border-color: var(--accent2);
+      color: var(--accent2);
+      box-shadow: 0 0 16px rgba(232,121,160,0.3);
+      animation: micPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes micPulse {
+      0%,100% { box-shadow: 0 0 12px rgba(232,121,160,0.25); }
+      50%      { box-shadow: 0 0 24px rgba(232,121,160,0.55); }
+    }
+
+    /* Volume bar nhỏ dưới mic button */
+    .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .vol-bar { width: 44px; height: 3px; border-radius: 2px; background: var(--border); overflow: hidden; opacity: 0; transition: opacity 0.3s; }
+    .vol-bar.visible { opacity: 1; }
+    .vol-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width 0.05s linear; }
+
     .meta { text-align: left; }
     .meta h1 { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
     .meta p { font-size: 11px; color: var(--muted); margin-top: 3px; }
 
     /* Cột phải: chat */
-    .right { display: flex; flex-direction: column; gap: 0; width: 320px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; height: calc(100% + 0px); }
+    .right { display: flex; flex-direction: column; gap: 0; width: 320px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
 
     .chat-header { padding: 14px 16px; border-bottom: 1px solid var(--border); font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
     .chat-header::before { content: '💬'; font-size: 14px; }
@@ -81,25 +112,16 @@
 
     .msg { display: flex; flex-direction: column; gap: 3px; max-width: 90%; animation: fadeUp 0.2s ease; }
     @keyframes fadeUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
-
     .msg.user { align-self: flex-end; align-items: flex-end; }
     .msg.assistant { align-self: flex-start; align-items: flex-start; }
-
     .msg-role { font-size: 10px; font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 4px; }
     .msg.user .msg-role { color: var(--accent); }
     .msg.assistant .msg-role { color: var(--accent2); }
-
-    .msg-bubble {
-      padding: 9px 13px; border-radius: 14px; font-size: 13px; line-height: 1.5;
-      word-break: break-word;
-    }
+    .msg-bubble { padding: 9px 13px; border-radius: 14px; font-size: 13px; line-height: 1.5; word-break: break-word; }
     .msg.user .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
     .msg.assistant .msg-bubble { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
-
-    /* Cursor nhấp nháy khi đang stream */
     .msg-bubble.streaming::after { content: '▋'; animation: blink 0.7s step-end infinite; color: var(--muted); margin-left: 2px; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
     .chat-empty { color: var(--muted); font-size: 12px; text-align: center; margin: auto; padding: 20px 0; }
 
     .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
@@ -134,10 +156,18 @@
           <p id="ph-text">Nhấn Start để bắt đầu</p>
         </div>
       </div>
+
       <div class="controls">
         <button id="btn-start" onclick="startSession()">▶ Start</button>
         <button id="btn-stop" onclick="stopSession()" disabled>⏹ Stop</button>
+
+        <!-- Mic button + volume bar -->
+        <div class="mic-wrap">
+          <button id="btn-mic" onclick="toggleMic()" disabled title="Bật/tắt microphone">🎤</button>
+          <div class="vol-bar" id="vol-bar"><div class="vol-fill" id="vol-fill"></div></div>
+        </div>
       </div>
+
       <div class="meta">
         <h1>Anam Avatar</h1>
         <p>Powered by Anam AI — Real-time streaming</p>
@@ -170,57 +200,189 @@
     const badgeText = document.getElementById("badge-text");
     const btnStart  = document.getElementById("btn-start");
     const btnStop   = document.getElementById("btn-stop");
+    const btnMic    = document.getElementById("btn-mic");
+    const volBar    = document.getElementById("vol-bar");
+    const volFill   = document.getElementById("vol-fill");
     const msgInput  = document.getElementById("msg-input");
     const btnSend   = document.getElementById("btn-send");
     const chatLog   = document.getElementById("chat-log");
-    const chatEmpty = document.getElementById("chat-empty");
 
     let polling = null;
     let audioCtx = null, audioWs = null, chatWs = null;
-    const sampleRate = 48000;
+    const OUTPUT_SAMPLE_RATE = 48000;
+
+    // ── Mic state ────────────────────────────────────────────
+    const MIC_SAMPLE_RATE = 16000; // Anam nhận 16kHz mono
+    const MIC_CHANNELS    = 1;
+    let micStream     = null;  // MediaStream từ getUserMedia
+    let micCtx        = null;  // AudioContext riêng cho mic
+    let micWs         = null;  // WebSocket tới /mic
+    let micNode       = null;  // AudioWorkletNode
+    let micActive     = false;
+
+    // AudioWorklet processor — chuyển Float32 → Int16 PCM và post về main thread
+    const WORKLET_CODE = `
+      class PcmProcessor extends AudioWorkletProcessor {
+        constructor() {
+          super();
+          this._buf = [];
+          this._chunkSize = 1600; // 100ms @ 16kHz
+        }
+        process(inputs) {
+          const ch = inputs[0][0];
+          if (!ch) return true;
+          for (let i = 0; i < ch.length; i++) this._buf.push(ch[i]);
+          while (this._buf.length >= this._chunkSize) {
+            const chunk = this._buf.splice(0, this._chunkSize);
+            const int16 = new Int16Array(this._chunkSize);
+            for (let i = 0; i < this._chunkSize; i++) {
+              int16[i] = Math.max(-32768, Math.min(32767, Math.round(chunk[i] * 32767)));
+            }
+            this.port.postMessage(int16.buffer, [int16.buffer]);
+          }
+          return true;
+        }
+      }
+      registerProcessor('pcm-processor', PcmProcessor);
+    `;
+
+    async function startMic() {
+      // Xin quyền mic
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: {
+        sampleRate: MIC_SAMPLE_RATE,
+        channelCount: MIC_CHANNELS,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      }});
+
+      // AudioContext với sample rate đúng
+      micCtx = new AudioContext({ sampleRate: MIC_SAMPLE_RATE });
+
+      // Inject worklet từ blob URL
+      const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
+      const workletUrl = URL.createObjectURL(blob);
+      await micCtx.audioWorklet.addModule(workletUrl);
+      URL.revokeObjectURL(workletUrl);
+
+      // Kết nối WebSocket /mic
+      micWs = new WebSocket(
+        `ws://localhost:8000/mic?sample_rate=${MIC_SAMPLE_RATE}&channels=${MIC_CHANNELS}`
+      );
+      micWs.binaryType = 'arraybuffer';
+      micWs.onopen  = () => console.log('🎤 Mic WS mở');
+      micWs.onerror = (e) => { console.error('Mic WS lỗi', e); stopMic(); };
+      micWs.onclose = () => { if (micActive) stopMic(); };
+
+      // Đợi WS mở trước khi gắn node
+      await new Promise((res, rej) => {
+        if (micWs.readyState === 1) return res();
+        micWs.addEventListener('open',  res,  { once: true });
+        micWs.addEventListener('error', rej, { once: true });
+      });
+
+      // Tạo source + worklet node
+      const source = micCtx.createMediaStreamSource(micStream);
+      micNode = new AudioWorkletNode(micCtx, 'pcm-processor');
+
+      // Analyser để hiển thị volume bar
+      const analyser = micCtx.createAnalyser();
+      analyser.fftSize = 256;
+      const dataArr = new Uint8Array(analyser.frequencyBinCount);
+
+      source.connect(analyser);
+      source.connect(micNode);
+
+      // Nhận PCM chunk từ worklet → gửi qua WS
+      micNode.port.onmessage = (e) => {
+        if (micWs && micWs.readyState === 1) {
+          micWs.send(e.data);
+        }
+      };
+
+      // Cập nhật volume bar
+      function drawVolume() {
+        if (!micActive) return;
+        analyser.getByteFrequencyData(dataArr);
+        const avg = dataArr.reduce((s, v) => s + v, 0) / dataArr.length;
+        volFill.style.width = Math.min(100, avg * 2) + '%';
+        requestAnimationFrame(drawVolume);
+      }
+      drawVolume();
+
+      micActive = true;
+      btnMic.classList.add('active');
+      btnMic.title = 'Tắt microphone';
+      volBar.classList.add('visible');
+    }
+
+    function stopMic() {
+      micActive = false;
+
+      if (micNode)   { micNode.disconnect(); micNode = null; }
+      if (micCtx)    { micCtx.close(); micCtx = null; }
+      if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+      if (micWs)     { micWs.close(); micWs = null; }
+
+      btnMic.classList.remove('active');
+      btnMic.title = 'Bật microphone';
+      volBar.classList.remove('visible');
+      volFill.style.width = '0%';
+    }
+
+    async function toggleMic() {
+      if (micActive) {
+        stopMic();
+        toast('🔇 Micro đã tắt');
+      } else {
+        try {
+          await startMic();
+          toast('🎤 Micro đang bật');
+        } catch (err) {
+          console.error(err);
+          toast('❌ Không thể truy cập micro: ' + err.message);
+        }
+      }
+    }
 
     // ── Chat UI ──────────────────────────────────────────────
-    const bubbles = {}; // id → { el, bubbleEl }
+    const bubbles = {};
+    const streamContent = {};
 
     function addOrUpdateBubble(id, role, content, endOfSpeech) {
-      if (chatEmpty) chatEmpty.style.display = "none";
+      const chatEmpty = document.getElementById('chat-empty');
+      if (chatEmpty) chatEmpty.style.display = 'none';
 
       if (!bubbles[id]) {
-        const msg = document.createElement("div");
+        const msg = document.createElement('div');
         msg.className = `msg ${role}`;
         msg.innerHTML = `
-          <div class="msg-role">${role === "user" ? "Bạn" : "Avatar"}</div>
+          <div class="msg-role">${role === 'user' ? 'Bạn' : 'Avatar'}</div>
           <div class="msg-bubble streaming"></div>`;
         chatLog.appendChild(msg);
-        bubbles[id] = { el: msg, bubbleEl: msg.querySelector(".msg-bubble") };
+        bubbles[id] = { el: msg, bubbleEl: msg.querySelector('.msg-bubble') };
         chatLog.scrollTop = chatLog.scrollHeight;
       }
 
       const bubble = bubbles[id].bubbleEl;
       bubble.textContent = content;
-      if (endOfSpeech) bubble.classList.remove("streaming");
+      if (endOfSpeech) bubble.classList.remove('streaming');
       chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    // Tích lũy nội dung streaming
-    const streamContent = {};
-
     function handleChatEvent(e) {
       const data = JSON.parse(e.data);
-      if (data.type !== "stream") return;
-
+      if (data.type !== 'stream') return;
       const { id, role, content, content_index, end_of_speech } = data;
-
       if (content_index === 0) streamContent[id] = content;
-      else streamContent[id] = (streamContent[id] || "") + content;
-
+      else streamContent[id] = (streamContent[id] || '') + content;
       addOrUpdateBubble(id, role, streamContent[id], end_of_speech);
     }
 
     function startChat() {
-      chatWs = new WebSocket(`ws://localhost:8000/chat`);
+      chatWs = new WebSocket('ws://localhost:8000/chat');
       chatWs.onmessage = handleChatEvent;
-      chatWs.onerror = () => console.warn("Chat WS error");
+      chatWs.onerror = () => console.warn('Chat WS error');
     }
 
     function stopChat() {
@@ -233,16 +395,16 @@
       Object.keys(streamContent).forEach(k => delete streamContent[k]);
     }
 
-    // ── Audio ────────────────────────────────────────────────
+    // ── Audio output ─────────────────────────────────────────
     function startAudio() {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate });
-      audioWs = new WebSocket(`ws://localhost:8000/audio`);
-      audioWs.binaryType = "arraybuffer";
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: OUTPUT_SAMPLE_RATE });
+      audioWs = new WebSocket('ws://localhost:8000/audio');
+      audioWs.binaryType = 'arraybuffer';
       let nextTime = 0;
       audioWs.onmessage = (e) => {
         const raw = new Int16Array(e.data);
         const numFrames = raw.length / 2;
-        const buf = audioCtx.createBuffer(2, numFrames, sampleRate);
+        const buf = audioCtx.createBuffer(2, numFrames, OUTPUT_SAMPLE_RATE);
         const L = buf.getChannelData(0), R = buf.getChannelData(1);
         for (let i = 0; i < numFrames; i++) {
           L[i] = raw[i * 2] / 32768;
@@ -258,78 +420,81 @@
     }
 
     function stopAudio() {
-      if (audioWs) { audioWs.close(); audioWs = null; }
+      if (audioWs)  { audioWs.close(); audioWs = null; }
       if (audioCtx) { audioCtx.close(); audioCtx = null; }
     }
 
     // ── Helpers ──────────────────────────────────────────────
     function toast(msg) {
-      const t = document.getElementById("toast");
-      t.textContent = msg; t.classList.add("show");
-      setTimeout(() => t.classList.remove("show"), 2500);
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
     }
 
     function setLive(live) {
       if (live) {
         avatar.src = `${BASE}/video?t=${Date.now()}`;
-        ph.classList.add("hidden");
-        card.classList.add("live");
-        badge.classList.add("live");
-        badgeText.textContent = "Live";
+        ph.classList.add('hidden');
+        card.classList.add('live');
+        badge.classList.add('live');
+        badgeText.textContent = 'Live';
         msgInput.disabled = false;
         btnSend.disabled = false;
         btnStop.disabled = false;
+        btnMic.disabled = false;   // ← mở khoá mic
         btnStart.disabled = true;
         startAudio();
         startChat();
       } else {
-        avatar.src = "";
-        ph.classList.remove("hidden");
-        spinner.style.display = "none";
-        phText.textContent = "Nhấn Start để bắt đầu";
-        card.classList.remove("live");
-        badge.classList.remove("live");
-        badgeText.textContent = "Offline";
+        avatar.src = '';
+        ph.classList.remove('hidden');
+        spinner.style.display = 'none';
+        phText.textContent = 'Nhấn Start để bắt đầu';
+        card.classList.remove('live');
+        badge.classList.remove('live');
+        badgeText.textContent = 'Offline';
         msgInput.disabled = true;
         btnSend.disabled = true;
         btnStop.disabled = true;
+        btnMic.disabled = true;    // ← khoá mic khi offline
         btnStart.disabled = false;
+        stopMic();     // dừng mic nếu đang bật
         stopAudio();
         stopChat();
       }
     }
 
-    // ── Actions ──────────────────────────────────────────────
+    // ── Session actions ──────────────────────────────────────
     async function startSession() {
       btnStart.disabled = true;
-      spinner.style.display = "block";
-      phText.textContent = "Đang kết nối...";
+      spinner.style.display = 'block';
+      phText.textContent = 'Đang kết nối...';
       clearChat();
-      await fetch(`${BASE}/start`, { method: "POST" });
-      toast("⏳ Đang kết nối Anam...");
+      await fetch(`${BASE}/start`, { method: 'POST' });
+      toast('⏳ Đang kết nối Anam...');
       polling = setInterval(async () => {
         try {
           const r = await fetch(`${BASE}/status`);
           const d = await r.json();
-          if (d.connected) { clearInterval(polling); setLive(true); toast("✅ Kết nối thành công!"); }
+          if (d.connected) { clearInterval(polling); setLive(true); toast('✅ Kết nối thành công!'); }
         } catch {}
       }, 1000);
     }
 
     async function stopSession() {
       clearInterval(polling);
-      await fetch(`${BASE}/stop`, { method: "POST" });
+      await fetch(`${BASE}/stop`, { method: 'POST' });
       setLive(false);
-      toast("🛑 Đã dừng kết nối");
+      toast('🛑 Đã dừng kết nối');
     }
 
     async function sendMessage() {
       const text = msgInput.value.trim();
       if (!text) return;
-      msgInput.value = "";
+      msgInput.value = '';
       const r = await fetch(`${BASE}/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text })
       });
       const d = await r.json();
