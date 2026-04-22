@@ -1,0 +1,6 @@
+anam
+fastapi
+uvicorn
+opencv-python
+python-dotenv
+aiofiles

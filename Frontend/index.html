@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anam Avatar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #09090f; --surface: #13131e; --border: rgba(255,255,255,0.07);
+      --accent: #7c6dfa; --accent2: #e879a0; --text: #e8e8f0; --muted: #5a5a7a;
+      --green: #4ade80; --red: #f87171;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'DM Sans', sans-serif; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 0; padding: 24px;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 20% 20%, rgba(124,109,250,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(232,121,160,0.10) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Layout tổng */
+    .app { position: relative; z-index: 1; display: flex; gap: 16px; width: 100%; max-width: 960px; align-items: flex-start; }
+
+    /* Cột trái: video + controls */
+    .left { display: flex; flex-direction: column; gap: 14px; flex: 1; min-width: 0; }
+
+    .label { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .label::before, .label::after { content: ''; display: block; width: 24px; height: 1px; background: var(--border); }
+
+    .card { position: relative; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 32px 80px rgba(0,0,0,0.6); width: 100%; aspect-ratio: 16/9; }
+    .card::before { content: ''; position: absolute; inset: -1px; border-radius: 21px; background: linear-gradient(135deg, var(--accent), transparent 40%, var(--accent2)); opacity: 0; transition: opacity 0.6s; z-index: 0; pointer-events: none; }
+    .card.live::before { opacity: 0.35; }
+    #avatar { display: block; width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 1; }
+
+    .placeholder { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: var(--surface); transition: opacity 0.5s; }
+    .placeholder.hidden { opacity: 0; pointer-events: none; }
+    .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .placeholder p { font-size: 13px; color: var(--muted); }
+
+    .badge { position: absolute; top: 12px; right: 12px; z-index: 3; display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px; background: rgba(9,9,15,0.75); backdrop-filter: blur(8px); border: 1px solid var(--border); font-size: 11px; font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .badge.live { color: var(--green); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); transition: background 0.4s; }
+    .badge.live .dot { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pdot 1.5s ease-in-out infinite; }
+    @keyframes pdot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .controls { display: flex; gap: 10px; }
+    button { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; border: none; border-radius: 12px; padding: 11px 20px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+    #btn-start { background: var(--accent); color: #fff; box-shadow: 0 4px 20px rgba(124,109,250,0.35); }
+    #btn-start:hover { background: #6a5ce8; transform: translateY(-1px); }
+    #btn-start:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    #btn-stop { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+    #btn-stop:hover { background: rgba(248,113,113,0.25); }
+    #btn-stop:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .meta { text-align: left; }
+    .meta h1 { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+    .meta p { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    /* Cột phải: chat */
+    .right { display: flex; flex-direction: column; gap: 0; width: 320px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; height: calc(100% + 0px); }
+
+    .chat-header { padding: 14px 16px; border-bottom: 1px solid var(--border); font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .chat-header::before { content: '💬'; font-size: 14px; }
+
+    #chat-log {
+      flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px;
+      min-height: 320px; max-height: 420px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    #chat-log::-webkit-scrollbar { width: 4px; }
+    #chat-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .msg { display: flex; flex-direction: column; gap: 3px; max-width: 90%; animation: fadeUp 0.2s ease; }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+
+    .msg.user { align-self: flex-end; align-items: flex-end; }
+    .msg.assistant { align-self: flex-start; align-items: flex-start; }
+
+    .msg-role { font-size: 10px; font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 4px; }
+    .msg.user .msg-role { color: var(--accent); }
+    .msg.assistant .msg-role { color: var(--accent2); }
+
+    .msg-bubble {
+      padding: 9px 13px; border-radius: 14px; font-size: 13px; line-height: 1.5;
+      word-break: break-word;
+    }
+    .msg.user .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .msg.assistant .msg-bubble { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
+
+    /* Cursor nhấp nháy khi đang stream */
+    .msg-bubble.streaming::after { content: '▋'; animation: blink 0.7s step-end infinite; color: var(--muted); margin-left: 2px; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    .chat-empty { color: var(--muted); font-size: 12px; text-align: center; margin: auto; padding: 20px 0; }
+
+    .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
+    #msg-input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 10px 13px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; transition: border-color 0.2s; }
+    #msg-input:focus { border-color: var(--accent); }
+    #msg-input::placeholder { color: var(--muted); }
+    #msg-input:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btn-send { background: var(--accent); color: #fff; border: none; padding: 10px 14px; border-radius: 10px; font-size: 14px; }
+    #btn-send:hover { background: #6a5ce8; }
+    #btn-send:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 20px; font-size: 13px; color: var(--text); transition: transform 0.3s ease; z-index: 99; pointer-events: none; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 700px) {
+      .app { flex-direction: column; }
+      .right { width: 100%; }
+      #chat-log { min-height: 200px; max-height: 260px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Cột trái -->
+    <div class="left">
+      <div class="label">Anam AI</div>
+      <div class="card" id="card">
+        <div class="badge" id="badge"><span class="dot"></span><span id="badge-text">Offline</span></div>
+        <img id="avatar" src="" alt="" />
+        <div class="placeholder" id="placeholder">
+          <div class="spinner" id="spinner" style="display:none"></div>
+          <p id="ph-text">Nhấn Start để bắt đầu</p>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="btn-start" onclick="startSession()">▶ Start</button>
+        <button id="btn-stop" onclick="stopSession()" disabled>⏹ Stop</button>
+      </div>
+      <div class="meta">
+        <h1>Anam Avatar</h1>
+        <p>Powered by Anam AI — Real-time streaming</p>
+      </div>
+    </div>
+
+    <!-- Cột phải: chat -->
+    <div class="right">
+      <div class="chat-header">Lịch sử chat</div>
+      <div id="chat-log">
+        <div class="chat-empty" id="chat-empty">Chưa có tin nhắn nào</div>
+      </div>
+      <div class="chat-input-row">
+        <input id="msg-input" type="text" placeholder="Nhập tin nhắn..." disabled
+               onkeydown="if(event.key==='Enter') sendMessage()" />
+        <button id="btn-send" onclick="sendMessage()" disabled>➤</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast"></div>
+
+  <script>
+    const BASE = "http://localhost:8000";
+    const avatar    = document.getElementById("avatar");
+    const ph        = document.getElementById("placeholder");
+    const spinner   = document.getElementById("spinner");
+    const phText    = document.getElementById("ph-text");
+    const card      = document.getElementById("card");
+    const badge     = document.getElementById("badge");
+    const badgeText = document.getElementById("badge-text");
+    const btnStart  = document.getElementById("btn-start");
+    const btnStop   = document.getElementById("btn-stop");
+    const msgInput  = document.getElementById("msg-input");
+    const btnSend   = document.getElementById("btn-send");
+    const chatLog   = document.getElementById("chat-log");
+    const chatEmpty = document.getElementById("chat-empty");
+
+    let polling = null;
+    let audioCtx = null, audioWs = null, chatWs = null;
+    const sampleRate = 48000;
+
+    // ── Chat UI ──────────────────────────────────────────────
+    const bubbles = {}; // id → { el, bubbleEl }
+
+    function addOrUpdateBubble(id, role, content, endOfSpeech) {
+      if (chatEmpty) chatEmpty.style.display = "none";
+
+      if (!bubbles[id]) {
+        const msg = document.createElement("div");
+        msg.className = `msg ${role}`;
+        msg.innerHTML = `
+          <div class="msg-role">${role === "user" ? "Bạn" : "Avatar"}</div>
+          <div class="msg-bubble streaming"></div>`;
+        chatLog.appendChild(msg);
+        bubbles[id] = { el: msg, bubbleEl: msg.querySelector(".msg-bubble") };
+        chatLog.scrollTop = chatLog.scrollHeight;
+      }
+
+      const bubble = bubbles[id].bubbleEl;
+      bubble.textContent = content;
+      if (endOfSpeech) bubble.classList.remove("streaming");
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    // Tích lũy nội dung streaming
+    const streamContent = {};
+
+    function handleChatEvent(e) {
+      const data = JSON.parse(e.data);
+      if (data.type !== "stream") return;
+
+      const { id, role, content, content_index, end_of_speech } = data;
+
+      if (content_index === 0) streamContent[id] = content;
+      else streamContent[id] = (streamContent[id] || "") + content;
+
+      addOrUpdateBubble(id, role, streamContent[id], end_of_speech);
+    }
+
+    function startChat() {
+      chatWs = new WebSocket(`ws://localhost:8000/chat`);
+      chatWs.onmessage = handleChatEvent;
+      chatWs.onerror = () => console.warn("Chat WS error");
+    }
+
+    function stopChat() {
+      if (chatWs) { chatWs.close(); chatWs = null; }
+    }
+
+    function clearChat() {
+      chatLog.innerHTML = '<div class="chat-empty" id="chat-empty">Chưa có tin nhắn nào</div>';
+      Object.keys(bubbles).forEach(k => delete bubbles[k]);
+      Object.keys(streamContent).forEach(k => delete streamContent[k]);
+    }
+
+    // ── Audio ────────────────────────────────────────────────
+    function startAudio() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate });
+      audioWs = new WebSocket(`ws://localhost:8000/audio`);
+      audioWs.binaryType = "arraybuffer";
+      let nextTime = 0;
+      audioWs.onmessage = (e) => {
+        const raw = new Int16Array(e.data);
+        const numFrames = raw.length / 2;
+        const buf = audioCtx.createBuffer(2, numFrames, sampleRate);
+        const L = buf.getChannelData(0), R = buf.getChannelData(1);
+        for (let i = 0; i < numFrames; i++) {
+          L[i] = raw[i * 2] / 32768;
+          R[i] = raw[i * 2 + 1] / 32768;
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf; src.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+        if (nextTime < now) nextTime = now + 0.05;
+        src.start(nextTime);
+        nextTime += buf.duration;
+      };
+    }
+
+    function stopAudio() {
+      if (audioWs) { audioWs.close(); audioWs = null; }
+      if (audioCtx) { audioCtx.close(); audioCtx = null; }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────
+    function toast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg; t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2500);
+    }
+
+    function setLive(live) {
+      if (live) {
+        avatar.src = `${BASE}/video?t=${Date.now()}`;
+        ph.classList.add("hidden");
+        card.classList.add("live");
+        badge.classList.add("live");
+        badgeText.textContent = "Live";
+        msgInput.disabled = false;
+        btnSend.disabled = false;
+        btnStop.disabled = false;
+        btnStart.disabled = true;
+        startAudio();
+        startChat();
+      } else {
+        avatar.src = "";
+        ph.classList.remove("hidden");
+        spinner.style.display = "none";
+        phText.textContent = "Nhấn Start để bắt đầu";
+        card.classList.remove("live");
+        badge.classList.remove("live");
+        badgeText.textContent = "Offline";
+        msgInput.disabled = true;
+        btnSend.disabled = true;
+        btnStop.disabled = true;
+        btnStart.disabled = false;
+        stopAudio();
+        stopChat();
+      }
+    }
+
+    // ── Actions ──────────────────────────────────────────────
+    async function startSession() {
+      btnStart.disabled = true;
+      spinner.style.display = "block";
+      phText.textContent = "Đang kết nối...";
+      clearChat();
+      await fetch(`${BASE}/start`, { method: "POST" });
+      toast("⏳ Đang kết nối Anam...");
+      polling = setInterval(async () => {
+        try {
+          const r = await fetch(`${BASE}/status`);
+          const d = await r.json();
+          if (d.connected) { clearInterval(polling); setLive(true); toast("✅ Kết nối thành công!"); }
+        } catch {}
+      }, 1000);
+    }
+
+    async function stopSession() {
+      clearInterval(polling);
+      await fetch(`${BASE}/stop`, { method: "POST" });
+      setLive(false);
+      toast("🛑 Đã dừng kết nối");
+    }
+
+    async function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+      msgInput.value = "";
+      const r = await fetch(`${BASE}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+      const d = await r.json();
+      if (!d.ok) toast(`❌ ${d.message}`);
+    }
+  </script>
+</body>
+</html>
