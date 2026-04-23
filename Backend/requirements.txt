@@ -4,3 +4,5 @@ uvicorn
 opencv-python
 python-dotenv
 aiofiles
+openai-whisper
+numpy
