@@ -1,5 +1,7 @@
 import asyncio
 import cv2
+import numpy as np
+import whisper
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse, FileResponse
@@ -9,6 +11,7 @@ from anam.types import MessageStreamEvent, AgentAudioInputConfig
 from dotenv import load_dotenv
 import os
 import uvicorn
+from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
 ANAM_API_KEY    = os.getenv("ANAM_API_KEY")
@@ -27,6 +30,12 @@ chat_clients: list[WebSocket] = []
 
 # AgentAudioInputStream hiện tại (dùng cho cách 2)
 agent_audio_stream = None
+
+# ─── Whisper STT setup ────────────────────────────────────────────────────────
+print("[*] Dang tai Whisper model (small)...")
+whisper_model = whisper.load_model("small")
+print("[OK] Whisper model san sang.")
+_thread_pool = ThreadPoolExecutor(max_workers=2)
 
 client = AnamClient(api_key=ANAM_API_KEY, persona_id=ANAM_PERSONA_ID)
 
@@ -81,7 +90,7 @@ async def run_anam_session():
         async with client.connect() as session:
             current_session = session
             is_connected = True
-            print("✅ Kết nối thành công!")
+            print("[OK] Ket noi thanh cong!")
 
             async def consume_video():
                 global latest_frame
@@ -130,6 +139,31 @@ app.add_middleware(
 async def index():
     frontend_path = os.path.join(os.path.dirname(__file__), "..", "Frontend", "index.html")
     return FileResponse(frontend_path)
+
+
+@app.get("/logo/logo.png")
+async def logo():
+    logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "logo", "logo.png"))
+    if not os.path.exists(logo_path):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Logo not found")
+    return FileResponse(logo_path, media_type="image/png")
+
+
+@app.get("/lecture")
+async def lecture_video():
+    """Serve file video bai giang truoc khi co live avatar."""
+    video_path = os.path.join(os.path.dirname(__file__), "..", "video",
+                              "L\u1ecbch s\u1eed ph\u00e1t tri\u1ec3n Viettel - Giai \u0111o\u1ea1n 3 (2010-2020)_1080p.mp4")
+    video_path = os.path.abspath(video_path)
+    if not os.path.exists(video_path):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Video not found")
+    return FileResponse(
+        video_path,
+        media_type="video/mp4",
+        headers={"Accept-Ranges": "bytes"},
+    )
 
 
 @app.post("/start")
@@ -212,7 +246,7 @@ async def mic_ws(websocket: WebSocket):
     sample_rate = int(websocket.query_params.get("sample_rate", 16000))
     num_channels = int(websocket.query_params.get("channels", 1))
 
-    print(f"🎤 Mic client kết nối: {sample_rate}Hz, {num_channels}ch")
+    print(f"[MIC] Mic client ket noi: {sample_rate}Hz, {num_channels}ch")
     try:
         while True:
             pcm_bytes = await websocket.receive_bytes()
@@ -223,9 +257,105 @@ async def mic_ws(websocket: WebSocket):
                 num_channels=num_channels,
             )
     except WebSocketDisconnect:
-        print("🎤 Mic client ngắt kết nối")
+        print("[MIC] Mic client ngat ket noi")
     except Exception as e:
         print(f"❌ Lỗi mic_ws: {e}")
+
+
+# ─── Vietnamese STT endpoint ─────────────────────────────────────────────────
+
+@app.websocket("/stt")
+async def stt_ws(websocket: WebSocket):
+    """
+    Nhận raw 16-bit PCM mono 16kHz từ frontend,
+    gom đủ chunk rồi dùng Whisper nhận dạng tiếng Việt,
+    sau đó gửi kết quả text vào Anam qua send_message().
+
+    Query params:
+        ?sample_rate=16000   (mặc định 16000)
+        ?lang=vi             (mặc định vi)
+        ?chunk_ms=1500       (tích luỹ bao nhiêu ms rồi mới transcribe)
+    """
+    await websocket.accept()
+
+    if not current_session or not is_connected:
+        await websocket.send_text('{"error":"Chưa kết nối Anam"}')
+        await websocket.close()
+        return
+
+    sample_rate = int(websocket.query_params.get("sample_rate", 16000))
+    lang        = websocket.query_params.get("lang", "vi")
+    chunk_ms    = int(websocket.query_params.get("chunk_ms", 1500))
+
+    # Số bytes cần gom trước khi chạy STT (16-bit = 2 bytes/sample)
+    bytes_needed = int(sample_rate * (chunk_ms / 1000) * 2)
+
+    print(f"[STT-VI] STT client ket noi: {sample_rate}Hz, lang={lang}, chunk_ms={chunk_ms}")
+    pcm_buffer = bytearray()
+
+    def run_whisper(pcm_bytes: bytes) -> str:
+        """Chạy Whisper trong thread pool để không block event loop."""
+        audio_np = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        result = whisper_model.transcribe(audio_np, language=lang, fp16=False)
+        return result["text"].strip()
+
+    try:
+        while True:
+            data = await websocket.receive()
+
+            # Nhận binary PCM chunks
+            if "bytes" in data and data["bytes"]:
+                pcm_buffer.extend(data["bytes"])
+
+                # Khi đủ dữ liệu thì chạy STT
+                while len(pcm_buffer) >= bytes_needed:
+                    chunk = bytes(pcm_buffer[:bytes_needed])
+                    del pcm_buffer[:bytes_needed]
+
+                    loop = asyncio.get_event_loop()
+                    text = await loop.run_in_executor(_thread_pool, run_whisper, chunk)
+
+                    if text and current_session:
+                        print(f"[STT] Nhan dang: '{text}'")
+                        # Hiển thị text người dùng trong chat
+                        await broadcast_chat({
+                            "type": "stream",
+                            "id": f"stt::{text[:20]}",
+                            "role": "user",
+                            "content": text,
+                            "content_index": 0,
+                            "end_of_speech": True,
+                            "interrupted": False,
+                        })
+                        # Gửi vào Anam
+                        await current_session.send_message(text)
+
+            # Nhận text command
+            elif "text" in data:
+                cmd = (data["text"] or "").strip().lower()
+                if cmd == "flush" and pcm_buffer and current_session:
+                    # Flush phần còn lại
+                    chunk = bytes(pcm_buffer)
+                    pcm_buffer.clear()
+                    loop = asyncio.get_event_loop()
+                    text = await loop.run_in_executor(_thread_pool, run_whisper, chunk)
+                    if text:
+                        print(f"[STT-FLUSH] Nhan dang: '{text}'")
+                        await broadcast_chat({
+                            "type": "stream",
+                            "id": f"stt::{text[:20]}",
+                            "role": "user",
+                            "content": text,
+                            "content_index": 0,
+                            "end_of_speech": True,
+                            "interrupted": False,
+                        })
+                        await current_session.send_message(text)
+
+    except WebSocketDisconnect:
+        print("[STT-VI] STT client ngat ket noi")
+    except Exception as e:
+        print(f"❌ Lỗi stt_ws: {e}")
 
 
 @app.websocket("/agent-audio")
@@ -265,7 +395,7 @@ async def agent_audio_ws(websocket: WebSocket):
 
     # Tạo stream mới (hoặc dùng lại nếu đã có)
     agent_audio_stream = current_session.create_agent_audio_input_stream(config)
-    print(f"🔊 AgentAudio stream mở: {sample_rate}Hz, {channels}ch, {encoding}")
+    print(f"[AUDIO] AgentAudio stream mo: {sample_rate}Hz, {channels}ch, {encoding}")
 
     try:
         while True:
@@ -280,12 +410,12 @@ async def agent_audio_ws(websocket: WebSocket):
                 if cmd == "end":
                     # Kết thúc lượt nói hiện tại
                     await agent_audio_stream.end_sequence()
-                    print("🔊 AgentAudio: end_sequence()")
+                    print("[AUDIO] AgentAudio: end_sequence()")
                 elif cmd == "close":
                     break
 
     except WebSocketDisconnect:
-        print("🔊 AgentAudio client ngắt kết nối")
+        print("[AUDIO] AgentAudio client ngat ket noi")
     except Exception as e:
         print(f"❌ Lỗi agent_audio_ws: {e}")
     finally:
@@ -320,7 +450,7 @@ async def chat_ws(websocket: WebSocket):
     """Output: nhận stream text hội thoại."""
     await websocket.accept()
     chat_clients.append(websocket)
-    print(f"💬 Chat client kết nối ({len(chat_clients)} clients)")
+    print(f"[CHAT] Chat client ket noi ({len(chat_clients)} clients)")
     try:
         while True:
             await websocket.receive_text()

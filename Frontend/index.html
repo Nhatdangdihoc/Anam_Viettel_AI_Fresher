@@ -3,55 +3,200 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Anam Avatar</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet" />
+  <title>Anam Avatar — Viettel AI Fresher</title>
+  <meta name="description" content="Hệ thống học liệu AI với Avatar tương tác thời gian thực" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #09090f; --surface: #13131e; --border: rgba(255,255,255,0.07);
-      --accent: #7c6dfa; --accent2: #e879a0; --text: #e8e8f0; --muted: #5a5a7a;
-      --green: #4ade80; --red: #f87171;
+      --bg: #09090f; --surface: #13131e; --surface2: #1a1a28;
+      --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+      --accent: #7c6dfa; --accent2: #e879a0; --accent3: #38bdf8;
+      --text: #e8e8f0; --muted: #5a5a7a; --muted2: #8888a8;
+      --green: #4ade80; --red: #f87171; --yellow: #fbbf24;
     }
     body {
       background: var(--bg); color: var(--text);
-      font-family: 'DM Sans', sans-serif; min-height: 100vh;
+      font-family: 'Roboto', sans-serif; min-height: 100vh;
       display: flex; flex-direction: column; align-items: center;
-      justify-content: center; gap: 0; padding: 24px;
+      padding: 20px 16px 32px; gap: 20px;
     }
     body::before {
-      content: ''; position: fixed; inset: 0;
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
       background:
-        radial-gradient(ellipse 60% 50% at 20% 20%, rgba(124,109,250,0.12) 0%, transparent 70%),
-        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(232,121,160,0.10) 0%, transparent 70%);
-      pointer-events: none; z-index: 0;
+        radial-gradient(ellipse 70% 50% at 15% 15%, rgba(124,109,250,0.10) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 45% at 85% 85%, rgba(232,121,160,0.09) 0%, transparent 65%),
+        radial-gradient(ellipse 40% 35% at 50% 0%, rgba(56,189,248,0.05) 0%, transparent 60%);
     }
 
-    .app { position: relative; z-index: 1; display: flex; gap: 16px; width: 100%; max-width: 960px; align-items: flex-start; }
+    /* ── Page header ──────────────────────────────────────────── */
+    .page-header {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 1100px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 4px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo {
+      height: 36px; width: auto; flex-shrink: 0;
+      display: block; object-fit: contain;
+      filter: drop-shadow(0 0 6px rgba(124,109,250,0.3));
+    }
+    .brand-name { font-family: 'Roboto', sans-serif; font-size: 16px; font-weight: 900; letter-spacing: -0.01em; }
+    .brand-sub  { font-size: 11px; color: var(--muted2); margin-top: 1px; font-weight: 400; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .chip {
+      font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 999px;
+      border: 1px solid var(--border); color: var(--muted2);
+      background: rgba(255,255,255,0.03);
+    }
+
+    /* ── Lecture video panel ──────────────────────────────────── */
+    .lecture-wrap {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 1100px;
+      border-radius: 20px; overflow: hidden;
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      transition: max-height 0.45s cubic-bezier(0.4,0,0.2,1),
+                  opacity 0.35s ease, margin-bottom 0.4s ease;
+      max-height: 600px; opacity: 1;
+    }
+    .lecture-wrap.collapsed {
+      max-height: 52px; /* header only */
+    }
+    .lecture-wrap.hidden-panel {
+      max-height: 0; opacity: 0; border-color: transparent;
+      margin-bottom: -20px; pointer-events: none;
+    }
+
+    .lecture-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 16px; cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .lecture-header:hover { background: rgba(255,255,255,0.04); }
+    .lecture-icon { font-size: 15px; flex-shrink: 0; }
+    .lecture-title {
+      flex: 1; font-family: 'Roboto', sans-serif; font-size: 12px;
+      font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--muted2);
+    }
+    .lecture-title span { color: var(--text); font-weight: 900; }
+    .lecture-chevron {
+      font-size: 12px; color: var(--muted); transition: transform 0.35s;
+      flex-shrink: 0;
+    }
+    .lecture-wrap.collapsed .lecture-chevron { transform: rotate(-90deg); }
+    .lecture-show-btn {
+      font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 8px; cursor: pointer; border: none;
+      background: rgba(124,109,250,0.15); color: var(--accent);
+      transition: all 0.2s; flex-shrink: 0;
+    }
+    .lecture-show-btn:hover { background: rgba(124,109,250,0.28); }
+
+    .lecture-body { padding: 0; }
+    .lecture-video-wrap {
+      position: relative; width: 100%;
+      background: #000;
+    }
+    #lecture-video {
+      display: block; width: 100%;
+      max-height: 460px; object-fit: contain;
+      background: #000;
+    }
+    /* Subtle progress accent overlay at bottom */
+    .lecture-video-wrap::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: 0.6; pointer-events: none;
+    }
+    .lecture-meta {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 12px; color: var(--muted2);
+    }
+    .lecture-meta-tag {
+      font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 6px;
+      background: rgba(56,189,248,0.12); color: var(--accent3);
+      border: 1px solid rgba(56,189,248,0.2);
+    }
+
+    /* ── Main area ────────────────────────────────────────────── */
+    .app {
+      position: relative; z-index: 1;
+      display: flex; gap: 16px; width: 100%; max-width: 1100px;
+      align-items: flex-start;
+    }
     .left { display: flex; flex-direction: column; gap: 14px; flex: 1; min-width: 0; }
 
-    .label { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .label {
+      font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+    }
     .label::before, .label::after { content: ''; display: block; width: 24px; height: 1px; background: var(--border); }
 
-    .card { position: relative; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 32px 80px rgba(0,0,0,0.6); width: 100%; aspect-ratio: 16/9; }
-    .card::before { content: ''; position: absolute; inset: -1px; border-radius: 21px; background: linear-gradient(135deg, var(--accent), transparent 40%, var(--accent2)); opacity: 0; transition: opacity 0.6s; z-index: 0; pointer-events: none; }
+    /* Avatar card */
+    .card {
+      position: relative; border-radius: 20px; overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+      width: 100%; aspect-ratio: 16/9;
+    }
+    .card::before {
+      content: ''; position: absolute; inset: -1px; border-radius: 21px;
+      background: linear-gradient(135deg, var(--accent), transparent 40%, var(--accent2));
+      opacity: 0; transition: opacity 0.6s; z-index: 0; pointer-events: none;
+    }
     .card.live::before { opacity: 0.35; }
     #avatar { display: block; width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 1; }
 
-    .placeholder { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: var(--surface); transition: opacity 0.5s; }
+    .placeholder {
+      position: absolute; inset: 0; z-index: 2;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      background: var(--surface); transition: opacity 0.5s;
+    }
     .placeholder.hidden { opacity: 0; pointer-events: none; }
     .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .placeholder p { font-size: 13px; color: var(--muted); }
+    .ph-hint { font-size: 11px; color: var(--muted); opacity: 0.6; margin-top: 4px; }
 
-    .badge { position: absolute; top: 12px; right: 12px; z-index: 3; display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px; background: rgba(9,9,15,0.75); backdrop-filter: blur(8px); border: 1px solid var(--border); font-size: 11px; font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .badge {
+      position: absolute; top: 12px; right: 12px; z-index: 3;
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 10px 4px 8px; border-radius: 999px;
+      background: rgba(9,9,15,0.75); backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      font-size: 11px; font-family: 'Syne', sans-serif; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    }
     .badge.live { color: var(--green); }
     .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); transition: background 0.4s; }
     .badge.live .dot { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pdot 1.5s ease-in-out infinite; }
     @keyframes pdot { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-    /* Controls row — giờ có thêm mic button */
-    .controls { display: flex; gap: 10px; align-items: center; }
-    button { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; border: none; border-radius: 12px; padding: 11px 20px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+    /* ── Controls ─────────────────────────────────────────────── */
+    .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    button {
+      font-family: 'Roboto', sans-serif; font-size: 13px; font-weight: 700;
+      letter-spacing: 0.06em; border: none; border-radius: 12px;
+      padding: 11px 18px; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+    }
     #btn-start { background: var(--accent); color: #fff; box-shadow: 0 4px 20px rgba(124,109,250,0.35); }
     #btn-start:hover { background: #6a5ce8; transform: translateY(-1px); }
     #btn-start:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
@@ -59,62 +204,83 @@
     #btn-stop:hover { background: rgba(248,113,113,0.25); }
     #btn-stop:disabled { opacity: 0.3; cursor: not-allowed; }
 
+    /* Toggle lecture in controls */
+    #btn-toggle-lecture {
+      background: rgba(56,189,248,0.10); color: var(--accent3);
+      border: 1px solid rgba(56,189,248,0.2); padding: 11px 14px; font-size: 13px;
+    }
+    #btn-toggle-lecture:hover { background: rgba(56,189,248,0.20); }
+
+    /* Language button */
+    #btn-lang {
+      height: 44px; padding: 0 13px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      color: var(--muted); font-size: 12px;
+      font-family: 'Roboto', sans-serif; font-weight: 700; letter-spacing: 0.05em;
+      display: flex; align-items: center; gap: 5px; transition: all 0.2s;
+    }
+    #btn-lang:disabled { opacity: 0.3; cursor: not-allowed; }
+    #btn-lang:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+    #btn-lang.vi {
+      background: rgba(218,59,59,0.12); border-color: rgba(218,59,59,0.45);
+      color: #ff8080; box-shadow: 0 0 10px rgba(218,59,59,0.15);
+    }
+
     /* Mic button */
     #btn-mic {
-      width: 44px; height: 44px; padding: 0;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 18px;
+      width: 44px; height: 44px; padding: 0; border-radius: 50%;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      color: var(--muted); font-size: 18px;
       display: flex; align-items: center; justify-content: center;
-      position: relative; overflow: hidden;
-      transition: all 0.2s;
+      position: relative; overflow: hidden; transition: all 0.2s;
     }
     #btn-mic:disabled { opacity: 0.3; cursor: not-allowed; }
     #btn-mic:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
-    /* Trạng thái đang nói — mic active */
     #btn-mic.active {
-      background: rgba(232,121,160,0.15);
-      border-color: var(--accent2);
-      color: var(--accent2);
-      box-shadow: 0 0 16px rgba(232,121,160,0.3);
+      background: rgba(232,121,160,0.15); border-color: var(--accent2);
+      color: var(--accent2); box-shadow: 0 0 16px rgba(232,121,160,0.3);
       animation: micPulse 1.2s ease-in-out infinite;
     }
     @keyframes micPulse {
       0%,100% { box-shadow: 0 0 12px rgba(232,121,160,0.25); }
       50%      { box-shadow: 0 0 24px rgba(232,121,160,0.55); }
     }
-
-    /* Volume bar nhỏ dưới mic button */
     .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; }
     .vol-bar { width: 44px; height: 3px; border-radius: 2px; background: var(--border); overflow: hidden; opacity: 0; transition: opacity 0.3s; }
     .vol-bar.visible { opacity: 1; }
     .vol-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width 0.05s linear; }
 
     .meta { text-align: left; }
-    .meta h1 { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
-    .meta p { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .meta h1 { font-family: 'Roboto', sans-serif; font-size: 17px; font-weight: 900; letter-spacing: -0.01em; }
+    .meta p  { font-size: 11px; color: var(--muted); margin-top: 3px; font-weight: 400; }
 
-    /* Cột phải: chat */
-    .right { display: flex; flex-direction: column; gap: 0; width: 320px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
-
-    .chat-header { padding: 14px 16px; border-bottom: 1px solid var(--border); font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    /* ── Right: chat panel ────────────────────────────────────── */
+    .right {
+      display: flex; flex-direction: column; gap: 0;
+      width: 300px; flex-shrink: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; overflow: hidden;
+    }
+    .chat-header {
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+    }
     .chat-header::before { content: '💬'; font-size: 14px; }
-
     #chat-log {
-      flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px;
-      min-height: 320px; max-height: 420px;
+      flex: 1; overflow-y: auto; padding: 14px 12px;
+      display: flex; flex-direction: column; gap: 10px;
+      min-height: 280px; max-height: 380px;
       scrollbar-width: thin; scrollbar-color: var(--border) transparent;
     }
     #chat-log::-webkit-scrollbar { width: 4px; }
     #chat-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
     .msg { display: flex; flex-direction: column; gap: 3px; max-width: 90%; animation: fadeUp 0.2s ease; }
     @keyframes fadeUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
     .msg.user { align-self: flex-end; align-items: flex-end; }
     .msg.assistant { align-self: flex-start; align-items: flex-start; }
-    .msg-role { font-size: 10px; font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 4px; }
+    .msg-role { font-size: 10px; font-family: 'Roboto', sans-serif; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 4px; }
     .msg.user .msg-role { color: var(--accent); }
     .msg.assistant .msg-role { color: var(--accent2); }
     .msg-bubble { padding: 9px 13px; border-radius: 14px; font-size: 13px; line-height: 1.5; word-break: break-word; }
@@ -123,9 +289,12 @@
     .msg-bubble.streaming::after { content: '▋'; animation: blink 0.7s step-end infinite; color: var(--muted); margin-left: 2px; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
     .chat-empty { color: var(--muted); font-size: 12px; text-align: center; margin: auto; padding: 20px 0; }
-
     .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
-    #msg-input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 10px 13px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; transition: border-color 0.2s; }
+    #msg-input {
+      flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 13px; color: var(--text);
+      font-family: 'Roboto', sans-serif; font-size: 13px; outline: none; transition: border-color 0.2s;
+    }
     #msg-input:focus { border-color: var(--accent); }
     #msg-input::placeholder { color: var(--muted); }
     #msg-input:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -133,33 +302,95 @@
     #btn-send:hover { background: #6a5ce8; }
     #btn-send:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 20px; font-size: 13px; color: var(--text); transition: transform 0.3s ease; z-index: 99; pointer-events: none; }
+    /* ── Toast ────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 12px; padding: 10px 20px; font-size: 13px;
+      color: var(--text); transition: transform 0.3s ease;
+      z-index: 999; pointer-events: none; white-space: nowrap;
+    }
     #toast.show { transform: translateX(-50%) translateY(0); }
 
-    @media (max-width: 700px) {
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 780px) {
       .app { flex-direction: column; }
       .right { width: 100%; }
-      #chat-log { min-height: 200px; max-height: 260px; }
+      #chat-log { min-height: 180px; max-height: 240px; }
+      .lecture-wrap { border-radius: 16px; }
+    }
+    @media (max-width: 480px) {
+      body { padding: 12px 10px 24px; }
+      .controls { gap: 6px; }
     }
   </style>
 </head>
 <body>
+
+  <!-- Page header -->
+  <header class="page-header">
+    <div class="brand">
+      <img class="brand-logo" src="../logo/logo.png" alt="Viettel Logo" />
+      <div>
+        <div class="brand-name">Viettel AI Fresher</div>
+        <div class="brand-sub">Interactive Learning Platform</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="chip">Beta</div>
+    </div>
+  </header>
+
+  <!-- Lecture video panel -->
+  <div class="lecture-wrap" id="lecture-wrap">
+    <div class="lecture-header" onclick="toggleLecturePanel()">
+      <span class="lecture-icon">🎬</span>
+      <div class="lecture-title">
+        Bài giảng &nbsp;·&nbsp;
+        <span>Lịch sử phát triển Viettel — Giai đoạn 3 (2010–2020)</span>
+      </div>
+      <span class="lecture-chevron">▾</span>
+    </div>
+    <div class="lecture-body" id="lecture-body">
+      <div class="lecture-video-wrap">
+        <video id="lecture-video" controls preload="metadata"
+               src="http://localhost:8000/lecture">
+          Trình duyệt không hỗ trợ video.
+        </video>
+      </div>
+      <div class="lecture-meta">
+        <span class="lecture-meta-tag">Viettel</span>
+        <span>Giai đoạn 3 · 2010–2020 · Toàn cầu hóa &amp; bứt phá</span>
+        <span style="margin-left:auto; color: var(--muted); font-size:11px;">Xem trước khi hỏi Avatar ↓</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main app area -->
   <div class="app">
-    <!-- Cột trái -->
+    <!-- Cột trái: avatar -->
     <div class="left">
-      <div class="label">Anam AI</div>
+      <div class="label">Live Avatar</div>
       <div class="card" id="card">
         <div class="badge" id="badge"><span class="dot"></span><span id="badge-text">Offline</span></div>
         <img id="avatar" src="" alt="" />
         <div class="placeholder" id="placeholder">
           <div class="spinner" id="spinner" style="display:none"></div>
           <p id="ph-text">Nhấn Start để bắt đầu</p>
+          <p class="ph-hint" id="ph-hint">Xem video bài giảng bên trên trước khi hỏi</p>
         </div>
       </div>
 
       <div class="controls">
         <button id="btn-start" onclick="startSession()">▶ Start</button>
-        <button id="btn-stop" onclick="stopSession()" disabled>⏹ Stop</button>
+        <button id="btn-stop"  onclick="stopSession()" disabled>⏹ Stop</button>
+
+        <!-- Toggle lecture panel -->
+        <button id="btn-toggle-lecture" onclick="toggleLecturePanel()" title="Xem/ẩn video bài giảng">📽 Bài giảng</button>
+
+        <!-- Language toggle -->
+        <button id="btn-lang" onclick="toggleLang()" disabled title="Chuyển ngôn ngữ STT">🇬🇧 EN</button>
 
         <!-- Mic button + volume bar -->
         <div class="mic-wrap">
@@ -187,40 +418,80 @@
       </div>
     </div>
   </div>
+
   <div id="toast"></div>
 
   <script>
     const BASE = "http://localhost:8000";
-    const avatar    = document.getElementById("avatar");
-    const ph        = document.getElementById("placeholder");
-    const spinner   = document.getElementById("spinner");
-    const phText    = document.getElementById("ph-text");
-    const card      = document.getElementById("card");
-    const badge     = document.getElementById("badge");
-    const badgeText = document.getElementById("badge-text");
-    const btnStart  = document.getElementById("btn-start");
-    const btnStop   = document.getElementById("btn-stop");
-    const btnMic    = document.getElementById("btn-mic");
-    const volBar    = document.getElementById("vol-bar");
-    const volFill   = document.getElementById("vol-fill");
-    const msgInput  = document.getElementById("msg-input");
-    const btnSend   = document.getElementById("btn-send");
-    const chatLog   = document.getElementById("chat-log");
+
+    // DOM refs
+    const avatar      = document.getElementById("avatar");
+    const ph          = document.getElementById("placeholder");
+    const spinner     = document.getElementById("spinner");
+    const phText      = document.getElementById("ph-text");
+    const phHint      = document.getElementById("ph-hint");
+    const card        = document.getElementById("card");
+    const badge       = document.getElementById("badge");
+    const badgeText   = document.getElementById("badge-text");
+    const btnStart    = document.getElementById("btn-start");
+    const btnStop     = document.getElementById("btn-stop");
+    const btnMic      = document.getElementById("btn-mic");
+    const btnLang     = document.getElementById("btn-lang");
+    const volBar      = document.getElementById("vol-bar");
+    const volFill     = document.getElementById("vol-fill");
+    const msgInput    = document.getElementById("msg-input");
+    const btnSend     = document.getElementById("btn-send");
+    const chatLog     = document.getElementById("chat-log");
+    const lectureWrap = document.getElementById("lecture-wrap");
+    const lectureVid  = document.getElementById("lecture-video");
 
     let polling = null;
     let audioCtx = null, audioWs = null, chatWs = null;
     const OUTPUT_SAMPLE_RATE = 48000;
 
-    // ── Mic state ────────────────────────────────────────────
-    const MIC_SAMPLE_RATE = 16000; // Anam nhận 16kHz mono
-    const MIC_CHANNELS    = 1;
-    let micStream     = null;  // MediaStream từ getUserMedia
-    let micCtx        = null;  // AudioContext riêng cho mic
-    let micWs         = null;  // WebSocket tới /mic
-    let micNode       = null;  // AudioWorkletNode
-    let micActive     = false;
+    // ── Lecture panel ─────────────────────────────────────────
+    let lecturePanelOpen = true;  // trạng thái hiện tại
 
-    // AudioWorklet processor — chuyển Float32 → Int16 PCM và post về main thread
+    function toggleLecturePanel() {
+      lecturePanelOpen = !lecturePanelOpen;
+      if (lecturePanelOpen) {
+        lectureWrap.classList.remove('collapsed', 'hidden-panel');
+      } else {
+        lectureWrap.classList.add('collapsed');
+      }
+    }
+
+    // Ẩn hẳn panel nhưng vẫn có thể mở lại qua nút "Bài giảng"
+    function hideLecturePanel() {
+      lecturePanelOpen = false;
+      lectureWrap.classList.add('collapsed');
+      // Tạm pause video nếu đang phát
+      if (lectureVid && !lectureVid.paused) lectureVid.pause();
+    }
+
+    // ── Language mode ─────────────────────────────────────────
+    let langMode = 'en';
+
+    function toggleLang() {
+      if (micActive) { toast('⚠️ Tắt mic trước khi đổi ngôn ngữ'); return; }
+      langMode = langMode === 'en' ? 'vi' : 'en';
+      if (langMode === 'vi') {
+        btnLang.textContent = '🇻🇳 VI';
+        btnLang.classList.add('vi');
+        toast('🇻🇳 Chuyển sang nhận tiếng Việt');
+      } else {
+        btnLang.textContent = '🇬🇧 EN';
+        btnLang.classList.remove('vi');
+        toast('🇬🇧 Chuyển sang nhận tiếng Anh');
+      }
+    }
+
+    // ── Mic (AudioWorklet + WebSocket) ────────────────────────
+    const MIC_SAMPLE_RATE = 16000;
+    const MIC_CHANNELS    = 1;
+    let micStream = null, micCtx = null, micWs = null, micNode = null;
+    let micActive = false;
+
     const WORKLET_CODE = `
       class PcmProcessor extends AudioWorkletProcessor {
         constructor() {
@@ -247,60 +518,46 @@
     `;
 
     async function startMic() {
-      // Xin quyền mic
       micStream = await navigator.mediaDevices.getUserMedia({ audio: {
-        sampleRate: MIC_SAMPLE_RATE,
-        channelCount: MIC_CHANNELS,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
+        sampleRate: MIC_SAMPLE_RATE, channelCount: MIC_CHANNELS,
+        echoCancellation: true, noiseSuppression: true, autoGainControl: true,
       }});
 
-      // AudioContext với sample rate đúng
       micCtx = new AudioContext({ sampleRate: MIC_SAMPLE_RATE });
-
-      // Inject worklet từ blob URL
       const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
-      const workletUrl = URL.createObjectURL(blob);
-      await micCtx.audioWorklet.addModule(workletUrl);
-      URL.revokeObjectURL(workletUrl);
+      const wUrl = URL.createObjectURL(blob);
+      await micCtx.audioWorklet.addModule(wUrl);
+      URL.revokeObjectURL(wUrl);
 
-      // Kết nối WebSocket /mic
-      micWs = new WebSocket(
-        `ws://localhost:8000/mic?sample_rate=${MIC_SAMPLE_RATE}&channels=${MIC_CHANNELS}`
-      );
+      const wsUrl = langMode === 'vi'
+        ? `ws://localhost:8000/stt?sample_rate=${MIC_SAMPLE_RATE}&channels=${MIC_CHANNELS}&lang=vi&chunk_ms=2000`
+        : `ws://localhost:8000/mic?sample_rate=${MIC_SAMPLE_RATE}&channels=${MIC_CHANNELS}`;
+
+      micWs = new WebSocket(wsUrl);
       micWs.binaryType = 'arraybuffer';
-      micWs.onopen  = () => console.log('🎤 Mic WS mở');
-      micWs.onerror = (e) => { console.error('Mic WS lỗi', e); stopMic(); };
+      micWs.onopen  = () => console.log(`[MIC] WS open (${langMode})`);
+      micWs.onerror = (e) => { console.error('Mic WS error', e); stopMic(); };
       micWs.onclose = () => { if (micActive) stopMic(); };
 
-      // Đợi WS mở trước khi gắn node
       await new Promise((res, rej) => {
         if (micWs.readyState === 1) return res();
-        micWs.addEventListener('open',  res,  { once: true });
+        micWs.addEventListener('open',  res, { once: true });
         micWs.addEventListener('error', rej, { once: true });
       });
 
-      // Tạo source + worklet node
-      const source = micCtx.createMediaStreamSource(micStream);
-      micNode = new AudioWorkletNode(micCtx, 'pcm-processor');
-
-      // Analyser để hiển thị volume bar
+      const source   = micCtx.createMediaStreamSource(micStream);
+      micNode        = new AudioWorkletNode(micCtx, 'pcm-processor');
       const analyser = micCtx.createAnalyser();
       analyser.fftSize = 256;
-      const dataArr = new Uint8Array(analyser.frequencyBinCount);
+      const dataArr  = new Uint8Array(analyser.frequencyBinCount);
 
       source.connect(analyser);
       source.connect(micNode);
 
-      // Nhận PCM chunk từ worklet → gửi qua WS
       micNode.port.onmessage = (e) => {
-        if (micWs && micWs.readyState === 1) {
-          micWs.send(e.data);
-        }
+        if (micWs && micWs.readyState === 1) micWs.send(e.data);
       };
 
-      // Cập nhật volume bar
       function drawVolume() {
         if (!micActive) return;
         analyser.getByteFrequencyData(dataArr);
@@ -318,12 +575,11 @@
 
     function stopMic() {
       micActive = false;
-
+      if (langMode === 'vi' && micWs && micWs.readyState === 1) micWs.send('flush');
       if (micNode)   { micNode.disconnect(); micNode = null; }
       if (micCtx)    { micCtx.close(); micCtx = null; }
       if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
       if (micWs)     { micWs.close(); micWs = null; }
-
       btnMic.classList.remove('active');
       btnMic.title = 'Bật microphone';
       volBar.classList.remove('visible');
@@ -331,28 +587,19 @@
     }
 
     async function toggleMic() {
-      if (micActive) {
-        stopMic();
-        toast('🔇 Micro đã tắt');
-      } else {
-        try {
-          await startMic();
-          toast('🎤 Micro đang bật');
-        } catch (err) {
-          console.error(err);
-          toast('❌ Không thể truy cập micro: ' + err.message);
-        }
+      if (micActive) { stopMic(); toast('🔇 Micro đã tắt'); }
+      else {
+        try { await startMic(); toast('🎤 Micro đang bật'); }
+        catch (err) { console.error(err); toast('❌ Không thể truy cập micro: ' + err.message); }
       }
     }
 
-    // ── Chat UI ──────────────────────────────────────────────
-    const bubbles = {};
-    const streamContent = {};
+    // ── Chat UI ───────────────────────────────────────────────
+    const bubbles = {}, streamContent = {};
 
     function addOrUpdateBubble(id, role, content, endOfSpeech) {
       const chatEmpty = document.getElementById('chat-empty');
       if (chatEmpty) chatEmpty.style.display = 'none';
-
       if (!bubbles[id]) {
         const msg = document.createElement('div');
         msg.className = `msg ${role}`;
@@ -363,7 +610,6 @@
         bubbles[id] = { el: msg, bubbleEl: msg.querySelector('.msg-bubble') };
         chatLog.scrollTop = chatLog.scrollHeight;
       }
-
       const bubble = bubbles[id].bubbleEl;
       bubble.textContent = content;
       if (endOfSpeech) bubble.classList.remove('streaming');
@@ -384,21 +630,17 @@
       chatWs.onmessage = handleChatEvent;
       chatWs.onerror = () => console.warn('Chat WS error');
     }
-
-    function stopChat() {
-      if (chatWs) { chatWs.close(); chatWs = null; }
-    }
-
+    function stopChat() { if (chatWs) { chatWs.close(); chatWs = null; } }
     function clearChat() {
       chatLog.innerHTML = '<div class="chat-empty" id="chat-empty">Chưa có tin nhắn nào</div>';
       Object.keys(bubbles).forEach(k => delete bubbles[k]);
       Object.keys(streamContent).forEach(k => delete streamContent[k]);
     }
 
-    // ── Audio output ─────────────────────────────────────────
+    // ── Audio output ──────────────────────────────────────────
     function startAudio() {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: OUTPUT_SAMPLE_RATE });
-      audioWs = new WebSocket('ws://localhost:8000/audio');
+      audioWs  = new WebSocket('ws://localhost:8000/audio');
       audioWs.binaryType = 'arraybuffer';
       let nextTime = 0;
       audioWs.onmessage = (e) => {
@@ -418,19 +660,19 @@
         nextTime += buf.duration;
       };
     }
-
     function stopAudio() {
       if (audioWs)  { audioWs.close(); audioWs = null; }
       if (audioCtx) { audioCtx.close(); audioCtx = null; }
     }
 
-    // ── Helpers ──────────────────────────────────────────────
+    // ── Toast ─────────────────────────────────────────────────
     function toast(msg) {
       const t = document.getElementById('toast');
       t.textContent = msg; t.classList.add('show');
       setTimeout(() => t.classList.remove('show'), 2500);
     }
 
+    // ── Session state ─────────────────────────────────────────
     function setLive(live) {
       if (live) {
         avatar.src = `${BASE}/video?t=${Date.now()}`;
@@ -439,36 +681,43 @@
         badge.classList.add('live');
         badgeText.textContent = 'Live';
         msgInput.disabled = false;
-        btnSend.disabled = false;
-        btnStop.disabled = false;
-        btnMic.disabled = false;   // ← mở khoá mic
-        btnStart.disabled = true;
+        btnSend.disabled   = false;
+        btnStop.disabled   = false;
+        btnMic.disabled    = false;
+        btnLang.disabled   = false;
+        btnStart.disabled  = true;
         startAudio();
         startChat();
+        // Thu nhỏ lecture panel khi avatar lên live
+        hideLecturePanel();
+        toast('✅ Kết nối thành công — bắt đầu hỏi Avatar!');
       } else {
         avatar.src = '';
         ph.classList.remove('hidden');
         spinner.style.display = 'none';
         phText.textContent = 'Nhấn Start để bắt đầu';
+        phHint.style.display = '';
         card.classList.remove('live');
         badge.classList.remove('live');
         badgeText.textContent = 'Offline';
         msgInput.disabled = true;
-        btnSend.disabled = true;
-        btnStop.disabled = true;
-        btnMic.disabled = true;    // ← khoá mic khi offline
+        btnSend.disabled  = true;
+        btnStop.disabled  = true;
+        btnMic.disabled   = true;
+        btnLang.disabled  = true;
         btnStart.disabled = false;
-        stopMic();     // dừng mic nếu đang bật
+        stopMic();
         stopAudio();
         stopChat();
       }
     }
 
-    // ── Session actions ──────────────────────────────────────
+    // ── Session actions ───────────────────────────────────────
     async function startSession() {
       btnStart.disabled = true;
       spinner.style.display = 'block';
       phText.textContent = 'Đang kết nối...';
+      phHint.style.display = 'none';
       clearChat();
       await fetch(`${BASE}/start`, { method: 'POST' });
       toast('⏳ Đang kết nối Anam...');
@@ -476,7 +725,7 @@
         try {
           const r = await fetch(`${BASE}/status`);
           const d = await r.json();
-          if (d.connected) { clearInterval(polling); setLive(true); toast('✅ Kết nối thành công!'); }
+          if (d.connected) { clearInterval(polling); setLive(true); }
         } catch {}
       }, 1000);
     }
