@@ -3,8 +3,8 @@ import cv2
 import numpy as np
 import whisper
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from anam import AnamClient, AnamEvent
 from anam.types import MessageStreamEvent, AgentAudioInputConfig
@@ -12,10 +12,12 @@ from dotenv import load_dotenv
 import os
 import uvicorn
 from concurrent.futures import ThreadPoolExecutor
+import httpx
 
 load_dotenv()
 ANAM_API_KEY    = os.getenv("ANAM_API_KEY")
 ANAM_PERSONA_ID = os.getenv("ANAM_PERSONA_ID")
+HEYGEN_API_KEY  = os.getenv("HEYGEN_API_KEY", "")
 
 if not ANAM_API_KEY or not ANAM_PERSONA_ID:
     raise ValueError("❌ Thiếu ANAM_API_KEY hoặc ANAM_PERSONA_ID trong file .env")
@@ -150,6 +152,19 @@ async def logo():
     return FileResponse(logo_path, media_type="image/png")
 
 
+@app.get("/subtitles/{filename}")
+async def serve_subtitle(filename: str):
+    """Serve subtitle .srt files from the video directory."""
+    if not filename.endswith(".srt"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Only .srt files allowed")
+    sub_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "video", filename))
+    if not os.path.exists(sub_path):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Subtitle not found")
+    return FileResponse(sub_path, media_type="text/plain; charset=utf-8")
+
+
 @app.get("/lecture")
 async def lecture_video():
     """Serve file video bai giang truoc khi co live avatar."""
@@ -217,6 +232,62 @@ async def send_message(body: dict):
 @app.get("/status")
 async def status():
     return {"connected": is_connected}
+
+
+# ─── HeyGen proxy endpoint ────────────────────────────────────────────────────
+
+@app.get("/api/heygen/videos")
+async def heygen_videos(
+    limit: int = Query(default=20, ge=1, le=100),
+    token: str = Query(default=None),
+    title: str = Query(default=None),
+    folder_id: str = Query(default=None),
+):
+    """
+    Proxy lấy danh sách video từ HeyGen API.
+    Chỉ trả về các video có status='completed'.
+    Endpoint: GET https://api.heygen.com/v3/videos
+    """
+    if not HEYGEN_API_KEY:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "HEYGEN_API_KEY chưa được cấu hình trong .env"}
+        )
+
+    params: dict = {"limit": limit}
+    if token:
+        params["token"] = token
+    if title:
+        params["title"] = title
+    if folder_id:
+        params["folder_id"] = folder_id
+
+    async with httpx.AsyncClient(timeout=15.0) as client_http:
+        try:
+            resp = await client_http.get(
+                "https://api.heygen.com/v3/videos",
+                headers={"x-api-key": HEYGEN_API_KEY},
+                params=params,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            # Lọc chỉ giữ video đã hoàn thành
+            if "data" in data and isinstance(data["data"], list):
+                data["data"] = [
+                    v for v in data["data"]
+                    if v.get("status") == "completed" and v.get("video_url")
+                ]
+            return JSONResponse(content=data)
+        except httpx.HTTPStatusError as e:
+            return JSONResponse(
+                status_code=e.response.status_code,
+                content={"error": f"HeyGen API lỗi: {e.response.text}"}
+            )
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={"error": str(e)}
+            )
 
 
 # ─── Audio INPUT endpoints ────────────────────────────────────────────────────

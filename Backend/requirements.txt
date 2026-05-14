@@ -6,3 +6,4 @@ python-dotenv
 aiofiles
 openai-whisper
 numpy
+httpx
