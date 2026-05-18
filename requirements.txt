@@ -1,0 +1,14 @@
+# ── Server ────────────────────────
+anam
+fastapi
+uvicorn
+opencv-python
+python-dotenv
+aiofiles
+numpy
+httpx
+
+# ── Pipeline ──────────────────────
+openai-whisper
+deep_translator
+openpyxl
