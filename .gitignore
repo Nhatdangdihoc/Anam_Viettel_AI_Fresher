@@ -1,5 +1,6 @@
 # Python
 venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -9,12 +10,22 @@ build/
 
 # Environment
 .env
+.env.*
 
-# Data (large files)
-data/videos/*.mp4
-data/videos/*.webm
-data/videos/*.mkv
-video/*.mp4
+# Data & Output (large files and generated files)
+data/videos/
+video/
+data/output/
+data/video-item/*/video/
+*.mp4
+*.webm
+*.mkv
+*.srt
+
+# Testing / Temp files
+test.txt
+test_*.txt
+scratch/
 
 # IDE
 .vscode/
@@ -27,4 +38,3 @@ Thumbs.db
 # Legacy (sẽ xóa sau khi migrate xong)
 # Backend/
 # Frontend/
-# video/

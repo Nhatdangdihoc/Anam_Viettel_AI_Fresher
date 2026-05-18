@@ -24,14 +24,17 @@ Anam_Viettel_AI_Fresher/
 │   └── index.html
 │
 ├── data/                         # Input & output data
-│   ├── videos/                   # Video bài giảng (input)
-│   ├── scripts/                  # Raw scripts từ HeyGen (input)
+│   ├── video-item/               # Local videos (thư mục chứa video & script)
+│   │   ├── item1/                # Thư mục cho video 1
+│   │   │   ├── video/            # Chứa file .mp4
+│   │   │   └── script/           # Chứa file .txt script
 │   └── output/                   # Kết quả pipeline
 │       ├── srt/                  # File .srt (VI, EN, bilingual)
 │       └── kb/                   # File KB cho Anam (.txt, .json)
 │
 ├── assets/                       # Static assets (logo, images)
 ├── .env                          # API keys (không commit)
+├── .gitignore
 ├── requirements.txt              # Python dependencies
 └── README.md
 ```
@@ -87,18 +90,18 @@ Pipeline tự động: **Raw script → Clean → Translate → SRT → KB expor
 ```bash
 # Chỉ clean script
 python -m src.pipeline.run_pipeline \
-    --script data/scripts/scripts.txt \
+    --script data/video-item/item1/script/scripts.txt \
     --title "Lịch sử Viettel - Giai đoạn 3"
 
 # Full pipeline (video + script)
 python -m src.pipeline.run_pipeline \
-    --video data/videos/bai_giang.mp4 \
-    --script data/scripts/scripts.txt \
+    --video data/video-item/item1/video/video.mp4 \
+    --script data/video-item/item1/script/scripts.txt \
     --title "Lịch sử Viettel - Giai đoạn 3"
 
 # Pipeline + upload lên Anam KB
 python -m src.pipeline.run_pipeline \
-    --video data/videos/bai_giang.mp4 \
+    --video data/video-item/item1/video/video.mp4 \
     --upload-kb --kb-folder-id <FOLDER_UUID>
 ```
 
