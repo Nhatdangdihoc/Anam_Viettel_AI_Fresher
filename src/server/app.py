@@ -4,6 +4,11 @@ Serve giao diện web, video bài giảng, phụ đề, và kết nối Anam AI 
 """
 
 import asyncio
+import sys
+
+# Fix Windows console encoding (cp1252 can't handle Unicode like →, 🔗, etc.)
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 import cv2
 import numpy as np
 import whisper
@@ -28,6 +33,7 @@ ASSETS_DIR = PROJECT_ROOT / "assets"
 DATA_DIR = PROJECT_ROOT / "data"
 SRT_DIR = DATA_DIR / "output" / "srt"
 VIDEOS_DIR = DATA_DIR / "videos"
+VIDEO_ITEMS_DIR = DATA_DIR / "video-item"
 
 # ── Load environment ──────────────────────────────────────────────────────────
 # Try root .env first, fallback to legacy Backend/.env
@@ -109,7 +115,7 @@ async def on_stream(event: MessageStreamEvent):
 async def run_anam_session():
     global latest_frame, current_session, is_connected
     try:
-        print("🔗 Đang kết nối Anam...")
+        print("[*] Dang ket noi Anam...")
         async with client.connect() as session:
             current_session = session
             is_connected = True
@@ -131,9 +137,9 @@ async def run_anam_session():
             await asyncio.gather(consume_video(), consume_audio())
 
     except asyncio.CancelledError:
-        print("🛑 Session đã dừng.")
+        print("[STOP] Session da dung.")
     except Exception as e:
-        print(f"❌ Lỗi: {type(e).__name__}: {e}")
+        print(f"[ERR] Loi: {type(e).__name__}: {e}")
     finally:
         current_session = None
         is_connected = False
@@ -174,7 +180,7 @@ async def logo():
 
 @app.get("/subtitles/{filename}")
 async def serve_subtitle(filename: str):
-    """Serve subtitle .srt files from the data/output/srt directory."""
+    """Serve subtitle .srt files from the data/output/srt directory (cleaned)."""
     if not filename.endswith(".srt"):
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Only .srt files allowed")
@@ -182,7 +188,12 @@ async def serve_subtitle(filename: str):
     if not sub_path.exists():
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Subtitle not found")
-    return FileResponse(str(sub_path), media_type="text/plain; charset=utf-8")
+    # Apply phonetic cleaning (e.g. "Viet Theo" -> "Viettel")
+    from fastapi.responses import Response
+    from src.pipeline.cleaner import clean_text
+    raw = sub_path.read_text(encoding="utf-8")
+    cleaned = clean_text(raw)
+    return Response(content=cleaned, media_type="text/plain; charset=utf-8")
 
 
 @app.get("/lecture")
@@ -214,6 +225,73 @@ async def lecture_video():
         media_type="video/mp4",
         headers={"Accept-Ranges": "bytes"},
     )
+
+
+@app.get("/api/local-videos")
+async def list_local_videos():
+    """List tat ca video-item tu data/video-item/."""
+    items = []
+    if not VIDEO_ITEMS_DIR.exists():
+        return JSONResponse(content={"data": items})
+
+    for item_dir in sorted(VIDEO_ITEMS_DIR.iterdir()):
+        if not item_dir.is_dir():
+            continue
+        video_dir = item_dir / "video"
+        if not video_dir.exists():
+            continue
+        # Tim file video
+        video_file = None
+        for f in video_dir.iterdir():
+            if f.suffix.lower() in (".mp4", ".webm", ".mkv"):
+                video_file = f
+                break
+        if not video_file:
+            continue
+
+        # Tim script
+        script_file = None
+        script_dir = item_dir / "script"
+        if script_dir.exists():
+            for f in script_dir.iterdir():
+                if f.suffix.lower() in (".txt", ".srt"):
+                    script_file = f
+                    break
+
+        # Tao title tu ten file video
+        title = video_file.stem.replace("_", " ")
+        size_mb = video_file.stat().st_size / 1024 / 1024
+
+        items.append({
+            "id": item_dir.name,
+            "title": title,
+            "video_url": f"http://localhost:8000/local-video/{item_dir.name}",
+            "size_mb": round(size_mb, 1),
+            "has_script": script_file is not None,
+            "source": "local",
+        })
+
+    return JSONResponse(content={"data": items})
+
+
+@app.get("/local-video/{item_id}")
+async def serve_local_video(item_id: str):
+    """Serve video file tu data/video-item/{item_id}/video/."""
+    from fastapi import HTTPException
+    item_dir = VIDEO_ITEMS_DIR / item_id
+    if not item_dir.exists():
+        raise HTTPException(status_code=404, detail="Video item not found")
+    video_dir = item_dir / "video"
+    if not video_dir.exists():
+        raise HTTPException(status_code=404, detail="No video directory")
+    for f in video_dir.iterdir():
+        if f.suffix.lower() in (".mp4", ".webm", ".mkv"):
+            return FileResponse(
+                str(f),
+                media_type="video/mp4",
+                headers={"Accept-Ranges": "bytes"},
+            )
+    raise HTTPException(status_code=404, detail="No video file found")
 
 
 @app.post("/start")
@@ -324,6 +402,137 @@ async def heygen_videos(
             )
 
 
+# ─── Subtitle on-demand loading ───────────────────────────────────────────────
+
+@app.post("/api/subtitles/load")
+async def load_subtitles_api(body: dict):
+    """
+    Load phụ đề on-demand cho video đang phát.
+    - Neu co subtitle_url (HeyGen translated) -> fetch + dich EN->VI
+    - Neu chi co video_url -> download + Whisper transcribe (cham)
+    """
+    subtitle_url = body.get("subtitle_url")
+    video_url = body.get("video_url")
+
+    # Cach 1: Fetch SRT tu HeyGen -> parse + dich EN->VI -> tra cues bilingual
+    if subtitle_url:
+        try:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as c:
+                resp = await c.get(subtitle_url)
+                resp.raise_for_status()
+                raw_srt = resp.text
+
+            # Parse SRT (HeyGen trả về monolingual EN)
+            from src.pipeline.srt_formatter import parse_srt
+
+            cues = parse_srt(raw_srt)
+            en_texts = [cue["text"].replace("\n", " ").strip() for cue in cues]
+
+            # Dich EN -> VI trong thread pool
+            loop = asyncio.get_event_loop()
+
+            def translate_en_to_vi():
+                from src.pipeline.translator import translate_sentences
+                return translate_sentences(en_texts, src="en", dest="vi", delay=0.2)
+
+            print(f"[SUB] Translating {len(en_texts)} HeyGen cues EN->VI...")
+            vi_texts = await loop.run_in_executor(_thread_pool, translate_en_to_vi)
+
+            # Tạo bilingual SRT
+            from src.pipeline.srt_formatter import format_srt_time
+            srt_lines = []
+            for i, (cue, vi, en) in enumerate(zip(cues, vi_texts, en_texts), 1):
+                start = format_srt_time(cue["start"])
+                end = format_srt_time(cue["end"])
+                srt_lines.extend([f"{i}", f"{start} --> {end}", vi, en, ""])
+
+            bilingual_srt = "\n".join(srt_lines)
+            print(f"[SUB] Done! {len(cues)} bilingual cues ready")
+
+            return JSONResponse(content={
+                "ok": True,
+                "srt": bilingual_srt,
+                "source": "heygen",
+            })
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return JSONResponse(
+                status_code=500,
+                content={"ok": False, "error": f"Lỗi tải phụ đề HeyGen: {e}"}
+            )
+
+    # Cách 2: Download video + Whisper transcribe (chậm, vài phút)
+    if video_url:
+        import tempfile
+
+        try:
+            print(f"[SUB] Downloading video for Whisper: {video_url[:80]}...")
+            async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as c:
+                resp = await c.get(video_url)
+                resp.raise_for_status()
+
+            # Lưu tạm
+            tmp = tempfile.NamedTemporaryFile(
+                suffix=".mp4", delete=False, dir=str(DATA_DIR)
+            )
+            tmp.write(resp.content)
+            tmp.close()
+            tmp_path = tmp.name
+
+            print(f"[SUB] Downloaded {len(resp.content) / 1024 / 1024:.1f}MB -> Whisper...")
+
+            # Whisper trong thread pool (không block event loop)
+            loop = asyncio.get_event_loop()
+
+            def run_whisper_transcribe():
+                from src.pipeline.transcriber import transcribe_video
+                from src.pipeline.srt_formatter import segments_to_bilingual_srt
+                from src.pipeline.cleaner import clean_segments
+                from src.pipeline.translator import translate_sentences
+
+                segments = transcribe_video(
+                    tmp_path, language="vi", model_name="small"
+                )
+                segments = clean_segments(segments)
+                
+                # Translate VI -> EN
+                vi_texts = [seg["text"].strip() for seg in segments]
+                print(f"[SUB] Translating {len(vi_texts)} Whisper segments VI->EN...")
+                en_texts = translate_sentences(vi_texts, src="vi", dest="en", delay=0.2)
+                
+                return segments_to_bilingual_srt(segments, en_texts)
+
+            srt_text = await loop.run_in_executor(
+                _thread_pool, run_whisper_transcribe
+            )
+
+            # Cleanup temp file
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+            print(f"[SUB] Whisper done! Generated SRT")
+            return JSONResponse(content={
+                "ok": True,
+                "srt": srt_text,
+                "source": "whisper",
+            })
+
+        except Exception as e:
+            print(f"[SUB] Whisper error: {e}")
+            return JSONResponse(
+                status_code=500,
+                content={"ok": False, "error": f"Lỗi Whisper: {e}"}
+            )
+
+    return JSONResponse(
+        status_code=400,
+        content={"ok": False, "error": "Cần subtitle_url hoặc video_url"}
+    )
+
+
 # ─── Audio INPUT endpoints ────────────────────────────────────────────────────
 
 @app.websocket("/mic")
@@ -355,7 +564,7 @@ async def mic_ws(websocket: WebSocket):
     except WebSocketDisconnect:
         print("[MIC] Mic client ngat ket noi")
     except Exception as e:
-        print(f"❌ Lỗi mic_ws: {e}")
+        print(f"[ERR] Loi mic_ws: {e}")
 
 
 # ─── Vietnamese STT endpoint ─────────────────────────────────────────────────
@@ -439,7 +648,7 @@ async def stt_ws(websocket: WebSocket):
     except WebSocketDisconnect:
         print("[STT-VI] STT client ngat ket noi")
     except Exception as e:
-        print(f"❌ Lỗi stt_ws: {e}")
+        print(f"[ERR] Loi stt_ws: {e}")
 
 
 @app.websocket("/agent-audio")
@@ -487,7 +696,7 @@ async def agent_audio_ws(websocket: WebSocket):
     except WebSocketDisconnect:
         print("[AUDIO] AgentAudio client ngat ket noi")
     except Exception as e:
-        print(f"❌ Lỗi agent_audio_ws: {e}")
+        print(f"[ERR] Loi agent_audio_ws: {e}")
     finally:
         if agent_audio_stream:
             try:

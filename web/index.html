@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Anam Avatar — Viettel AI Fresher</title>
   <meta name="description" content="Hệ thống học liệu AI với Avatar tương tác thời gian thực" />
+  <link rel="icon" type="image/png" href="/logo/logo.png" />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,7 +39,7 @@
     }
     .brand { display: flex; align-items: center; gap: 12px; }
     .brand-logo {
-      height: 36px; width: auto; flex-shrink: 0;
+      height: 52px; width: auto; flex-shrink: 0;
       display: block; object-fit: contain;
       filter: drop-shadow(0 0 6px rgba(238,0,51,0.3));
     }
@@ -199,6 +200,28 @@
     .sub-line-vi.animating, .sub-line-en.animating {
       animation: subFadeIn 0.3s ease;
     }
+    /* Load subtitle button */
+    .btn-load-sub {
+      font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 6px; cursor: pointer; border: none;
+      background: rgba(74,222,128,0.15); color: #22c55e;
+      border: 1px solid rgba(74,222,128,0.3);
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-load-sub:hover { background: rgba(74,222,128,0.25); }
+    .btn-load-sub.loading {
+      background: rgba(251,191,36,0.15); color: #d97706;
+      border-color: rgba(251,191,36,0.3); cursor: wait;
+    }
+    .btn-load-sub.done {
+      background: rgba(74,222,128,0.2); color: #16a34a;
+      border-color: rgba(74,222,128,0.4); cursor: default;
+    }
+    .btn-load-sub.error {
+      background: rgba(248,113,113,0.15); color: #dc2626;
+      border-color: rgba(248,113,113,0.3);
+    }
 
     /* ── Next videos side panel ───────────────────────────── */
     .next-videos-panel {
@@ -206,7 +229,7 @@
       border-left: 1px solid var(--border);
       background: var(--surface2);
       display: flex; flex-direction: column;
-      overflow: hidden;
+      max-height: 520px; overflow: hidden;
     }
     .next-videos-header {
       padding: 12px 14px;
@@ -506,7 +529,7 @@
   <!-- Page header -->
   <header class="page-header">
     <div class="brand">
-      <img class="brand-logo" src="../logo/logo.png" alt="Viettel Logo" />
+      <img class="brand-logo" src="/logo/logo.png" alt="Viettel Logo" />
       <div>
         <div class="brand-name">Viettel AI Fresher</div>
         <div class="brand-sub">Interactive Learning Platform</div>
@@ -547,6 +570,7 @@
           <div class="subtitle-header">
             <span class="subtitle-header-icon">💬</span>
             <span class="subtitle-header-title">Phụ đề · Subtitles</span>
+            <button class="btn-load-sub" id="btn-load-sub" onclick="loadSubtitlesOnDemand()">📥 Tải phụ đề</button>
             <button class="subtitle-lang-toggle active" id="btn-sub-vi" onclick="toggleSubLang('vi')">VI</button>
             <button class="subtitle-lang-toggle active" id="btn-sub-en" onclick="toggleSubLang('en')">EN</button>
           </div>
@@ -562,7 +586,7 @@
       <div class="next-videos-panel">
         <div class="next-videos-header">
           <span class="next-videos-header-icon">📋</span>
-          <span class="next-videos-header-title">Bài giảng tiếp theo</span>
+          <span class="next-videos-header-title">Danh sách video</span>
           <span class="next-videos-header-count" id="nv-count">—</span>
         </div>
         <div class="next-videos-list" id="nv-list">
@@ -699,21 +723,46 @@
       return (Date.now() / 1000) - createdAt < sevenDays;
     }
 
-    function playHeyGenVideo(video, itemEl) {
-      // Cập nhật player
+    // Lưu thông tin video hiện tại cho subtitle loading
+    let currentVideoInfo = {
+      video_url: `${BASE}/lecture`,
+      subtitle_url: null,
+      isLocal: true,
+    };
+
+    function playVideo(video, itemEl) {
+      // Cap nhat player
       lectureVid.src = video.video_url;
       lectureVid.play().catch(() => {});
-      // Cập nhật tiêu đề & meta
-      lectureTitleText.textContent = video.title || 'Bài giảng HeyGen';
-      lectureMetaDesc.textContent = [
-        video.output_language ? `Ngôn ngữ: ${video.output_language}` : '',
-        video.duration ? `⏱ ${fmtDuration(video.duration)}` : '',
-      ].filter(Boolean).join(' · ');
-      // Đánh dấu active
+      // Cap nhat tieu de & meta
+      lectureTitleText.textContent = video.title || 'Bai giang';
+      const metaParts = [];
+      if (video.source === 'local') metaParts.push('Local');
+      if (video.output_language) metaParts.push(`Ngon ngu: ${video.output_language}`);
+      if (video.duration) metaParts.push(`\u23f1 ${fmtDuration(video.duration)}`);
+      if (video.size_mb) metaParts.push(`${video.size_mb} MB`);
+      lectureMetaDesc.textContent = metaParts.filter(Boolean).join(' \u00b7 ');
+      // Luu video info cho subtitle
+      currentVideoInfo = {
+        video_url: video.video_url,
+        subtitle_url: video.subtitle_url || null,
+        isLocal: video.source === 'local',
+      };
+      // Reset subtitle state
+      subtitlesCues = [];
+      currentCueIdx = -1;
+      subViEl.textContent = 'B\u1ea5m "T\u1ea3i ph\u1ee5 \u0111\u1ec1" \u0111\u1ec3 hi\u1ec7n ph\u1ee5 \u0111\u1ec1...';
+      subEnEl.textContent = 'Click "T\u1ea3i ph\u1ee5 \u0111\u1ec1" to load subtitles...';
+      subViEl.classList.add('empty');
+      subEnEl.classList.add('empty');
+      const btn = document.getElementById('btn-load-sub');
+      btn.textContent = '\ud83d\udce5 T\u1ea3i ph\u1ee5 \u0111\u1ec1';
+      btn.className = 'btn-load-sub';
+      // Danh dau active
       if (currentActiveNvItem) currentActiveNvItem.classList.remove('active');
       itemEl.classList.add('active');
       currentActiveNvItem = itemEl;
-      // Mở rộng panel nếu đang thu nhỏ
+      // Mo rong panel neu dang thu nho
       if (!lecturePanelOpen) {
         lecturePanelOpen = true;
         lectureWrap.classList.remove('collapsed', 'hidden-panel');
@@ -729,19 +778,22 @@
         ? `<img class="nv-thumb" src="${video.thumbnail_url}" alt="${video.title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="nv-thumb-placeholder" style="display:none">🎬</div>`
         : `<div class="nv-thumb-placeholder">🎬</div>`;
 
-      const badgeHtml = isNewVideo(video.created_at)
-        ? `<span class="nv-badge-new">Mới</span>` : '';
+      const isLocal = video.source === 'local';
+      const badgeHtml = isLocal
+        ? `<span class="nv-badge-new" style="background:rgba(74,222,128,0.15);color:#22c55e;border-color:rgba(74,222,128,0.3)">Local</span>`
+        : isNewVideo(video.created_at) ? `<span class="nv-badge-new">M\u1edbi</span>` : '';
       const durHtml = video.duration
-        ? `<span class="nv-duration">⏱ ${fmtDuration(video.duration)}</span>` : '';
+        ? `<span class="nv-duration">\u23f1 ${fmtDuration(video.duration)}</span>`
+        : video.size_mb ? `<span class="nv-duration">${video.size_mb} MB</span>` : '';
 
       div.innerHTML = `
         ${thumbHtml}
         <div class="nv-info">
-          <div class="nv-title">${video.title || 'Bài giảng'}</div>
+          <div class="nv-title">${video.title || 'B\u00e0i gi\u1ea3ng'}</div>
           <div class="nv-meta-row">${durHtml}${badgeHtml}</div>
         </div>`;
 
-      div.addEventListener('click', () => playHeyGenVideo(video, div));
+      div.addEventListener('click', () => playVideo(video, div));
       return div;
     }
 
@@ -755,13 +807,11 @@
     }
 
     async function fetchHeyGenVideos(token = null) {
-      // Hiện trạng loading nếu là lần đầu
+      // Show loading state
       if (!token) {
         nvState.style.display = 'flex';
-        nvState.innerHTML = '<div class="nv-spinner"></div><span>Đang tải danh sách...</span>';
-        // Xóa danh sách cũ
-        Array.from(nvList.children).forEach(c => { if (c !== nvState) nvList.removeChild(c); });
-        nvLoaded = [];
+        nvState.innerHTML = '<div class="nv-spinner"></div><span>\u0110ang t\u1ea3i HeyGen...</span>';
+        // Khong xoa danh sach cu (giu lai local videos da render)
       } else {
         const loadMoreBtn = document.getElementById('nv-load-more-btn');
         if (loadMoreBtn) loadMoreBtn.textContent = 'Đang tải...';
@@ -811,8 +861,35 @@
       }
     }
 
-    // Tự động tải danh sách khi trang load
-    fetchHeyGenVideos();
+    // --- Fetch local videos first, then HeyGen ---
+    async function fetchLocalVideos() {
+      try {
+        const resp = await fetch(`${BASE}/api/local-videos`);
+        const data = await resp.json();
+        const locals = data.data || [];
+        if (locals.length > 0) {
+          locals.forEach(v => nvList.appendChild(renderNvItem(v)));
+          nvLoaded = [...nvLoaded, ...locals];
+          // Separator
+          const sep = document.createElement('div');
+          sep.style.cssText = 'padding:4px 8px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);text-align:center;border-bottom:1px solid var(--border);margin:2px 0 4px';
+          sep.textContent = 'HeyGen Cloud';
+          nvList.appendChild(sep);
+        }
+      } catch (e) {
+        console.log('[LOCAL] Error loading local videos:', e);
+      }
+    }
+
+    async function initVideoList() {
+      nvState.style.display = 'flex';
+      nvState.innerHTML = '<div class="nv-spinner"></div><span>\u0110ang t\u1ea3i danh s\u00e1ch...</span>';
+      await fetchLocalVideos();
+      await fetchHeyGenVideos();
+    }
+
+    // Tu dong tai danh sach khi trang load
+    initVideoList();
 
     // ── Language mode ─────────────────────────────────────────
     let langMode = 'en';
@@ -1124,14 +1201,13 @@
       return h * 3600 + m * 60 + s + parseInt(ms) / 1000;
     }
 
-    function parseBilingualSrt(text) {
-      // Parse SRT where each cue has 2 text lines: VI then EN
+    function parseSrt(text) {
+      // Parse SRT — auto detect: bilingual (2 text lines) or mono (1 text line)
       const blocks = text.trim().split(/\n\s*\n/);
       const cues = [];
       for (const block of blocks) {
         const lines = block.trim().split('\n');
         if (lines.length < 3) continue;
-        // lines[0] = index, lines[1] = timecode, lines[2+] = text
         const timeParts = lines[1].split('-->');
         if (timeParts.length !== 2) continue;
         const start = parseSrtTime(timeParts[0]);
@@ -1143,19 +1219,84 @@
       return cues;
     }
 
-    async function loadSubtitles() {
+    async function loadSubtitlesOnDemand() {
+      const btn = document.getElementById('btn-load-sub');
+
+      // Nếu đã load rồi thì bỏ qua
+      if (btn.classList.contains('done')) return;
+      if (btn.classList.contains('loading')) return;
+
+      btn.textContent = '⏳ Đang tải...';
+      btn.className = 'btn-load-sub loading';
+      subViEl.textContent = 'Đang tải phụ đề...';
+      subEnEl.textContent = 'Loading subtitles...';
+
       try {
-        // Try bilingual SRT first
-        const resp = await fetch(`${BASE}/subtitles/subtitle_vi_en.srt`);
-        if (resp.ok) {
-          const text = await resp.text();
-          subtitlesCues = parseBilingualSrt(text);
-          console.log(`[SUB] Loaded ${subtitlesCues.length} bilingual cues`);
-        } else {
-          console.log('[SUB] Bilingual SRT not found');
+        let srtText = null;
+        let source = '';
+
+        // Ưu tiên 1: HeyGen video có subtitle_url → fetch + dịch EN→VI
+        if (!srtText && currentVideoInfo.subtitle_url) {
+          btn.textContent = '⏳ Đang dịch EN→VI...';
+          subViEl.textContent = 'Đang tải và dịch phụ đề từ HeyGen...';
+          subEnEl.textContent = 'Downloading & translating subtitles...';
+          const resp = await fetch(`${BASE}/api/subtitles/load`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subtitle_url: currentVideoInfo.subtitle_url }),
+          });
+          const data = await resp.json();
+          if (data.ok) {
+            srtText = data.srt;
+            source = 'heygen';
+          }
         }
+
+        // Ưu tiên 2: Whisper transcribe (chậm)
+        if (!srtText && currentVideoInfo.video_url) {
+          btn.textContent = '⏳ Whisper đang xử lý...';
+          const resp = await fetch(`${BASE}/api/subtitles/load`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ video_url: currentVideoInfo.video_url }),
+          });
+          const data = await resp.json();
+          if (data.ok) {
+            srtText = data.srt;
+            source = 'whisper';
+          } else {
+            throw new Error(data.error || 'Whisper failed');
+          }
+        }
+
+        if (srtText) {
+          subtitlesCues = parseSrt(srtText);
+          currentCueIdx = -1;
+          btn.textContent = `✅ ${subtitlesCues.length} cues (${source})`;
+          btn.className = 'btn-load-sub done';
+          toast(`✅ Đã tải ${subtitlesCues.length} phụ đề (${source})`);
+          // Cập nhật subtitle ngay
+          updateSubtitle(lectureVid.currentTime);
+        } else {
+          btn.textContent = '❌ Không tìm thấy';
+          btn.className = 'btn-load-sub error';
+          subViEl.textContent = 'Không có phụ đề cho video này';
+          subEnEl.textContent = 'No subtitles available';
+        }
+
       } catch (e) {
-        console.log('[SUB] Error loading subtitles:', e);
+        console.error('[SUB] Error:', e);
+        btn.textContent = '❌ Lỗi — bấm thử lại';
+        btn.className = 'btn-load-sub error';
+        subViEl.textContent = 'Lỗi tải phụ đề, thử lại...';
+        subEnEl.textContent = e.message || 'Error loading subtitles';
+        // Cho phép retry bằng cách xóa class error sau 3s
+        setTimeout(() => {
+          if (btn.classList.contains('error')) {
+            btn.textContent = '📥 Tải phụ đề';
+            btn.className = 'btn-load-sub';
+          }
+        }, 3000);
       }
     }
 
@@ -1181,8 +1322,8 @@
         subEnEl.textContent = '';
         subViEl.classList.add('empty');
         subEnEl.classList.add('empty');
-        subViEl.textContent = 'Phụ đề sẽ hiện ở đây khi video phát...';
-        subEnEl.textContent = 'Subtitles will appear here when playing...';
+        subViEl.textContent = '...';
+        subEnEl.textContent = '...';
       } else {
         const cue = subtitlesCues[foundIdx];
         subViEl.classList.remove('empty');
@@ -1210,9 +1351,6 @@
       currentCueIdx = -1;
       updateSubtitle(lectureVid.currentTime);
     });
-
-    // Load subtitles on page load
-    loadSubtitles();
 
   </script>
 </body>
