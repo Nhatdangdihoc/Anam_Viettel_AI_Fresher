@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anam Avatar — Viettel AI Fresher</title>
+  <meta name="description" content="Hệ thống học liệu AI với Avatar tương tác thời gian thực" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #ffffff; --surface: #ffffff; --surface2: #f4f6f8;
+      --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.15);
+      --accent: #ee0033; --accent2: #ff3333; --accent3: #cc0022;
+      --text: #1a1a1a; --muted: #666666; --muted2: #888888;
+      --green: #4ade80; --red: #f87171; --yellow: #fbbf24;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Roboto', sans-serif; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 20px 16px 32px; gap: 20px;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 15%, rgba(238,0,51,0.10) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 45% at 85% 85%, rgba(238,0,51,0.09) 0%, transparent 65%),
+        radial-gradient(ellipse 40% 35% at 50% 0%, rgba(238,0,51,0.05) 0%, transparent 60%);
+    }
+
+    /* ── Page header ──────────────────────────────────────────── */
+    .page-header {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 1100px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 4px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo {
+      height: 36px; width: auto; flex-shrink: 0;
+      display: block; object-fit: contain;
+      filter: drop-shadow(0 0 6px rgba(238,0,51,0.3));
+    }
+    .brand-name { font-family: 'Roboto', sans-serif; font-size: 16px; font-weight: 900; letter-spacing: -0.01em; }
+    .brand-sub  { font-size: 11px; color: var(--muted2); margin-top: 1px; font-weight: 400; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .chip {
+      font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 999px;
+      border: 1px solid var(--border); color: var(--muted2);
+      background: rgba(0,0,0,0.03);
+    }
+
+    /* ── Lecture video panel ──────────────────────────────────── */
+    .lecture-wrap {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 1100px;
+      border-radius: 20px; overflow: hidden;
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      transition: max-height 0.45s cubic-bezier(0.4,0,0.2,1),
+                  opacity 0.35s ease, margin-bottom 0.4s ease;
+      max-height: 600px; opacity: 1;
+    }
+    .lecture-wrap.collapsed {
+      max-height: 52px; /* header only */
+    }
+    .lecture-wrap.hidden-panel {
+      max-height: 0; opacity: 0; border-color: transparent;
+      margin-bottom: -20px; pointer-events: none;
+    }
+
+    .lecture-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 16px; cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .lecture-header:hover { background: rgba(0,0,0,0.04); }
+    .lecture-icon { font-size: 15px; flex-shrink: 0; }
+    .lecture-title {
+      flex: 1; font-family: 'Roboto', sans-serif; font-size: 12px;
+      font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--muted2);
+    }
+    .lecture-title span { color: var(--text); font-weight: 900; }
+    .lecture-chevron {
+      font-size: 12px; color: var(--muted); transition: transform 0.35s;
+      flex-shrink: 0;
+    }
+    .lecture-wrap.collapsed .lecture-chevron { transform: rotate(-90deg); }
+    .lecture-show-btn {
+      font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 8px; cursor: pointer; border: none;
+      background: rgba(238,0,51,0.15); color: var(--accent);
+      transition: all 0.2s; flex-shrink: 0;
+    }
+    .lecture-show-btn:hover { background: rgba(238,0,51,0.28); }
+
+    .lecture-body { padding: 0; display: flex; }
+
+    /* ── Video player side ────────────────────────────────── */
+    .lecture-player-side {
+      flex: 1; min-width: 0; display: flex; flex-direction: column;
+    }
+    .lecture-video-wrap {
+      position: relative; width: 100%;
+      background: #000;
+    }
+    #lecture-video {
+      display: block; width: 100%;
+      max-height: 400px; object-fit: contain;
+      background: #000;
+    }
+    /* Subtle progress accent overlay at bottom */
+    .lecture-video-wrap::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: 0.6; pointer-events: none;
+    }
+    .lecture-meta {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 12px; color: var(--muted2);
+      flex-shrink: 0;
+    }
+    .lecture-meta-tag {
+      font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 6px;
+      background: rgba(238,0,51,0.12); color: var(--accent3);
+      border: 1px solid rgba(238,0,51,0.2);
+    }
+
+    /* ── Subtitle panel ───────────────────────────────────── */
+    .subtitle-panel {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .subtitle-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .subtitle-header-icon { font-size: 14px; flex-shrink: 0; }
+    .subtitle-header-title {
+      flex: 1; font-family: 'Roboto', sans-serif; font-size: 11px;
+      font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted2);
+    }
+    .subtitle-lang-toggle {
+      font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 6px; cursor: pointer; border: none;
+      background: rgba(238,0,51,0.10); color: var(--accent);
+      border: 1px solid rgba(238,0,51,0.2);
+      transition: all 0.2s;
+    }
+    .subtitle-lang-toggle:hover { background: rgba(238,0,51,0.20); }
+    .subtitle-lang-toggle.active {
+      background: var(--accent); color: #fff;
+    }
+    .subtitle-body {
+      padding: 14px 18px;
+      min-height: 58px;
+      display: flex; flex-direction: column; gap: 6px;
+      align-items: center; justify-content: center;
+    }
+    .sub-line-vi {
+      font-family: 'Roboto', sans-serif; font-size: 15px; font-weight: 500;
+      color: var(--text); text-align: center; line-height: 1.55;
+      transition: opacity 0.25s ease;
+    }
+    .sub-line-en {
+      font-family: 'Roboto', sans-serif; font-size: 13px; font-weight: 400;
+      color: var(--muted); text-align: center; line-height: 1.5;
+      font-style: italic;
+      transition: opacity 0.25s ease;
+    }
+    .sub-line-vi.empty, .sub-line-en.empty {
+      opacity: 0.35;
+    }
+    /* Smooth fade animation for subtitle changes */
+    @keyframes subFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .sub-line-vi.animating, .sub-line-en.animating {
+      animation: subFadeIn 0.3s ease;
+    }
+
+    /* ── Next videos side panel ───────────────────────────── */
+    .next-videos-panel {
+      width: 280px; flex-shrink: 0;
+      border-left: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .next-videos-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .next-videos-header-icon { font-size: 14px; }
+    .next-videos-header-title {
+      flex: 1; font-family: 'Roboto', sans-serif; font-size: 11px;
+      font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted2);
+    }
+    .next-videos-header-count {
+      font-size: 10px; padding: 2px 8px; border-radius: 999px;
+      background: rgba(238,0,51,0.15); color: var(--accent);
+      font-family: 'Roboto', sans-serif; font-weight: 700; letter-spacing: 0.05em;
+    }
+    .next-videos-list {
+      flex: 1; overflow-y: auto;
+      padding: 8px;
+      display: flex; flex-direction: column; gap: 6px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    .next-videos-list::-webkit-scrollbar { width: 4px; }
+    .next-videos-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Loading/error states */
+    .next-videos-state {
+      padding: 24px 14px; text-align: center;
+      color: var(--muted); font-size: 12px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .next-videos-state .nv-spinner {
+      width: 22px; height: 22px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    .next-videos-state .nv-retry-btn {
+      font-size: 11px; padding: 5px 12px; border-radius: 8px; cursor: pointer;
+      background: rgba(238,0,51,0.15); color: var(--accent);
+      border: 1px solid rgba(238,0,51,0.25); font-family: 'Roboto', sans-serif;
+      font-weight: 700; letter-spacing: 0.06em; transition: all 0.2s;
+    }
+    .next-videos-state .nv-retry-btn:hover { background: rgba(238,0,51,0.28); }
+
+    /* Video card item */
+    .nv-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 8px; border-radius: 10px; cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.18s; background: transparent;
+    }
+    .nv-item:hover { background: rgba(0,0,0,0.04); border-color: var(--border); }
+    .nv-item.active {
+      background: rgba(238,0,51,0.10); border-color: rgba(238,0,51,0.3);
+    }
+    .nv-thumb {
+      width: 90px; height: 52px; border-radius: 7px; object-fit: cover;
+      background: #e5e5e5; flex-shrink: 0; display: block;
+    }
+    .nv-thumb-placeholder {
+      width: 90px; height: 52px; border-radius: 7px; flex-shrink: 0;
+      background: linear-gradient(135deg, #f0f0f0, #e5e5e5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .nv-info { flex: 1; min-width: 0; }
+    .nv-title {
+      font-size: 11px; font-family: 'Roboto', sans-serif; font-weight: 500;
+      color: var(--text); line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; margin-bottom: 4px;
+    }
+    .nv-meta-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .nv-duration {
+      font-size: 10px; color: var(--muted); font-family: 'Roboto', sans-serif;
+    }
+    .nv-badge-new {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+      padding: 1px 5px; border-radius: 4px; text-transform: uppercase;
+      background: rgba(238,0,51,0.15); color: var(--accent2);
+      border: 1px solid rgba(238,0,51,0.25);
+    }
+    .nv-load-more {
+      margin: 4px 0 2px; padding: 7px 12px; border-radius: 8px; cursor: pointer;
+      font-size: 11px; font-family: 'Roboto', sans-serif; font-weight: 700;
+      background: rgba(0,0,0,0.04); color: var(--muted);
+      border: 1px solid var(--border); transition: all 0.2s; text-align: center;
+    }
+    .nv-load-more:hover { background: rgba(0,0,0,0.08); color: var(--text); }
+
+    /* Responsive: trên mobile, panel xếp dọc */
+    @media (max-width: 780px) {
+      .lecture-body { flex-direction: column; }
+      .next-videos-panel { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 220px; }
+      .next-videos-list { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
+      .nv-item { flex-direction: column; min-width: 130px; align-items: stretch; }
+      .nv-thumb, .nv-thumb-placeholder { width: 100%; height: 70px; }
+    }
+
+    /* ── Main area ────────────────────────────────────────────── */
+    .app {
+      position: relative; z-index: 1;
+      display: flex; gap: 16px; width: 100%; max-width: 1100px;
+      align-items: flex-start;
+    }
+    .left { display: flex; flex-direction: column; gap: 14px; flex: 1; min-width: 0; }
+
+    .label {
+      font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .label::before, .label::after { content: ''; display: block; width: 24px; height: 1px; background: var(--border); }
+
+    /* Avatar card */
+    .card {
+      position: relative; border-radius: 20px; overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+      width: 100%; aspect-ratio: 16/9;
+    }
+    .card::before {
+      content: ''; position: absolute; inset: -1px; border-radius: 21px;
+      background: linear-gradient(135deg, var(--accent), transparent 40%, var(--accent2));
+      opacity: 0; transition: opacity 0.6s; z-index: 0; pointer-events: none;
+    }
+    .card.live::before { opacity: 0.35; }
+    #avatar { display: block; width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 1; }
+
+    .placeholder {
+      position: absolute; inset: 0; z-index: 2;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      background: var(--surface); transition: opacity 0.5s;
+    }
+    .placeholder.hidden { opacity: 0; pointer-events: none; }
+    .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .placeholder p { font-size: 13px; color: var(--muted); }
+    .ph-hint { font-size: 11px; color: var(--muted); opacity: 0.6; margin-top: 4px; }
+
+    .badge {
+      position: absolute; top: 12px; right: 12px; z-index: 3;
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 10px 4px 8px; border-radius: 999px;
+      background: rgba(255,255,255,0.9); backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      font-size: 11px; font-family: 'Syne', sans-serif; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    }
+    .badge.live { color: var(--green); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); transition: background 0.4s; }
+    .badge.live .dot { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pdot 1.5s ease-in-out infinite; }
+    @keyframes pdot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── Controls ─────────────────────────────────────────────── */
+    .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    button {
+      font-family: 'Roboto', sans-serif; font-size: 13px; font-weight: 700;
+      letter-spacing: 0.06em; border: none; border-radius: 12px;
+      padding: 11px 18px; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+    }
+    #btn-start { background: var(--accent); color: #fff; box-shadow: 0 4px 20px rgba(238,0,51,0.35); }
+    #btn-start:hover { background: #6a5ce8; transform: translateY(-1px); }
+    #btn-start:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    #btn-stop { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+    #btn-stop:hover { background: rgba(248,113,113,0.25); }
+    #btn-stop:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Toggle lecture in controls */
+    #btn-toggle-lecture {
+      background: rgba(238,0,51,0.10); color: var(--accent3);
+      border: 1px solid rgba(238,0,51,0.2); padding: 11px 14px; font-size: 13px;
+    }
+    #btn-toggle-lecture:hover { background: rgba(238,0,51,0.20); }
+
+    /* Language button */
+    #btn-lang {
+      height: 44px; padding: 0 13px; border-radius: 12px;
+      background: rgba(0,0,0,0.04); border: 1px solid var(--border);
+      color: var(--muted); font-size: 12px;
+      font-family: 'Roboto', sans-serif; font-weight: 700; letter-spacing: 0.05em;
+      display: flex; align-items: center; gap: 5px; transition: all 0.2s;
+    }
+    #btn-lang:disabled { opacity: 0.3; cursor: not-allowed; }
+    #btn-lang:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+    #btn-lang.vi {
+      background: rgba(218,59,59,0.12); border-color: rgba(218,59,59,0.45);
+      color: #ff8080; box-shadow: 0 0 10px rgba(218,59,59,0.15);
+    }
+
+    /* Mic button */
+    #btn-mic {
+      width: 44px; height: 44px; padding: 0; border-radius: 50%;
+      background: rgba(0,0,0,0.04); border: 1px solid var(--border);
+      color: var(--muted); font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden; transition: all 0.2s;
+    }
+    #btn-mic:disabled { opacity: 0.3; cursor: not-allowed; }
+    #btn-mic:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+    #btn-mic.active {
+      background: rgba(238,0,51,0.15); border-color: var(--accent2);
+      color: var(--accent2); box-shadow: 0 0 16px rgba(238,0,51,0.3);
+      animation: micPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes micPulse {
+      0%,100% { box-shadow: 0 0 12px rgba(238,0,51,0.25); }
+      50%      { box-shadow: 0 0 24px rgba(238,0,51,0.55); }
+    }
+    .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .vol-bar { width: 44px; height: 3px; border-radius: 2px; background: var(--border); overflow: hidden; opacity: 0; transition: opacity 0.3s; }
+    .vol-bar.visible { opacity: 1; }
+    .vol-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width 0.05s linear; }
+
+    .meta { text-align: left; }
+    .meta h1 { font-family: 'Roboto', sans-serif; font-size: 17px; font-weight: 900; letter-spacing: -0.01em; }
+    .meta p  { font-size: 11px; color: var(--muted); margin-top: 3px; font-weight: 400; }
+
+    /* ── Right: chat panel ────────────────────────────────────── */
+    .right {
+      display: flex; flex-direction: column; gap: 0;
+      width: 300px; flex-shrink: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; overflow: hidden;
+    }
+    .chat-header {
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .chat-header::before { content: '💬'; font-size: 14px; }
+    #chat-log {
+      flex: 1; overflow-y: auto; padding: 14px 12px;
+      display: flex; flex-direction: column; gap: 10px;
+      min-height: 280px; max-height: 380px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    #chat-log::-webkit-scrollbar { width: 4px; }
+    #chat-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .msg { display: flex; flex-direction: column; gap: 3px; max-width: 90%; animation: fadeUp 0.2s ease; }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+    .msg.user { align-self: flex-end; align-items: flex-end; }
+    .msg.assistant { align-self: flex-start; align-items: flex-start; }
+    .msg-role { font-size: 10px; font-family: 'Roboto', sans-serif; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 4px; }
+    .msg.user .msg-role { color: var(--accent); }
+    .msg.assistant .msg-role { color: var(--accent2); }
+    .msg-bubble { padding: 9px 13px; border-radius: 14px; font-size: 13px; line-height: 1.5; word-break: break-word; }
+    .msg.user .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .msg.assistant .msg-bubble { background: rgba(0,0,0,0.05); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
+    .msg-bubble.streaming::after { content: '▋'; animation: blink 0.7s step-end infinite; color: var(--muted); margin-left: 2px; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .chat-empty { color: var(--muted); font-size: 12px; text-align: center; margin: auto; padding: 20px 0; }
+    .chat-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
+    #msg-input {
+      flex: 1; background: rgba(0,0,0,0.04); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 13px; color: var(--text);
+      font-family: 'Roboto', sans-serif; font-size: 13px; outline: none; transition: border-color 0.2s;
+    }
+    #msg-input:focus { border-color: var(--accent); }
+    #msg-input::placeholder { color: var(--muted); }
+    #msg-input:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btn-send { background: var(--accent); color: #fff; border: none; padding: 10px 14px; border-radius: 10px; font-size: 14px; }
+    #btn-send:hover { background: #6a5ce8; }
+    #btn-send:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ── Toast ────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 12px; padding: 10px 20px; font-size: 13px;
+      color: var(--text); transition: transform 0.3s ease;
+      z-index: 999; pointer-events: none; white-space: nowrap;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 780px) {
+      .app { flex-direction: column; }
+      .right { width: 100%; }
+      #chat-log { min-height: 180px; max-height: 240px; }
+      .lecture-wrap { border-radius: 16px; }
+    }
+    @media (max-width: 480px) {
+      body { padding: 12px 10px 24px; }
+      .controls { gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Page header -->
+  <header class="page-header">
+    <div class="brand">
+      <img class="brand-logo" src="../logo/logo.png" alt="Viettel Logo" />
+      <div>
+        <div class="brand-name">Viettel AI Fresher</div>
+        <div class="brand-sub">Interactive Learning Platform</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="chip">Beta</div>
+    </div>
+  </header>
+
+  <!-- Lecture video panel -->
+  <div class="lecture-wrap" id="lecture-wrap">
+    <div class="lecture-header" onclick="toggleLecturePanel()">
+      <span class="lecture-icon">🎬</span>
+      <div class="lecture-title" id="lecture-panel-title">
+        Bài giảng &nbsp;·&nbsp;
+        <span id="lecture-title-text">Lịch sử phát triển Viettel — Giai đoạn 3 (2010–2020)</span>
+      </div>
+      <span class="lecture-chevron">▾</span>
+    </div>
+    <div class="lecture-body" id="lecture-body">
+      <!-- Player side -->
+      <div class="lecture-player-side">
+        <div class="lecture-video-wrap">
+          <video id="lecture-video" controls preload="metadata"
+                 src="http://localhost:8000/lecture">
+            Trình duyệt không hỗ trợ video.
+          </video>
+        </div>
+        <div class="lecture-meta">
+          <span class="lecture-meta-tag">Viettel</span>
+          <span id="lecture-meta-desc">Giai đoạn 3 · 2010–2020 · Toàn cầu hóa &amp; bứt phá</span>
+          <span style="margin-left:auto; color: var(--muted); font-size:11px;">Xem trước khi hỏi Avatar ↓</span>
+        </div>
+
+        <!-- Subtitle display panel -->
+        <div class="subtitle-panel" id="subtitle-panel">
+          <div class="subtitle-header">
+            <span class="subtitle-header-icon">💬</span>
+            <span class="subtitle-header-title">Phụ đề · Subtitles</span>
+            <button class="subtitle-lang-toggle active" id="btn-sub-vi" onclick="toggleSubLang('vi')">VI</button>
+            <button class="subtitle-lang-toggle active" id="btn-sub-en" onclick="toggleSubLang('en')">EN</button>
+          </div>
+          <div class="subtitle-body" id="subtitle-body">
+            <div class="sub-line-vi empty" id="sub-vi">Phụ đề sẽ hiện ở đây khi video phát...</div>
+            <div class="sub-line-en empty" id="sub-en">Subtitles will appear here when playing...</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Next videos panel -->
+      <div class="next-videos-panel">
+        <div class="next-videos-header">
+          <span class="next-videos-header-icon">📋</span>
+          <span class="next-videos-header-title">Bài giảng tiếp theo</span>
+          <span class="next-videos-header-count" id="nv-count">—</span>
+        </div>
+        <div class="next-videos-list" id="nv-list">
+          <div class="next-videos-state" id="nv-state">
+            <div class="nv-spinner"></div>
+            <span>Đang tải danh sách...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main app area -->
+  <div class="app">
+    <!-- Cột trái: avatar -->
+    <div class="left">
+      <div class="label">Live Avatar</div>
+      <div class="card" id="card">
+        <div class="badge" id="badge"><span class="dot"></span><span id="badge-text">Offline</span></div>
+        <img id="avatar" src="" alt="" />
+        <div class="placeholder" id="placeholder">
+          <div class="spinner" id="spinner" style="display:none"></div>
+          <p id="ph-text">Nhấn Start để bắt đầu</p>
+          <p class="ph-hint" id="ph-hint">Xem video bài giảng bên trên trước khi hỏi</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="btn-start" onclick="startSession()">▶ Start</button>
+        <button id="btn-stop"  onclick="stopSession()" disabled>⏹ Stop</button>
+
+        <!-- Toggle lecture panel -->
+        <button id="btn-toggle-lecture" onclick="toggleLecturePanel()" title="Xem/ẩn video bài giảng">📽 Bài giảng</button>
+
+        <!-- Language toggle -->
+        <button id="btn-lang" onclick="toggleLang()" disabled title="Chuyển ngôn ngữ STT">🇬🇧 EN</button>
+
+        <!-- Mic button + volume bar -->
+        <div class="mic-wrap">
+          <button id="btn-mic" onclick="toggleMic()" disabled title="Bật/tắt microphone">🎤</button>
+          <div class="vol-bar" id="vol-bar"><div class="vol-fill" id="vol-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <h1>Anam Avatar</h1>
+        <p>Powered by Anam AI — Real-time streaming</p>
+      </div>
+    </div>
+
+    <!-- Cột phải: chat -->
+    <div class="right">
+      <div class="chat-header">Lịch sử chat</div>
+      <div id="chat-log">
+        <div class="chat-empty" id="chat-empty">Chưa có tin nhắn nào</div>
+      </div>
+      <div class="chat-input-row">
+        <input id="msg-input" type="text" placeholder="Nhập tin nhắn..." disabled
+               onkeydown="if(event.key==='Enter') sendMessage()" />
+        <button id="btn-send" onclick="sendMessage()" disabled>➤</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const BASE = "http://localhost:8000";
+
+    // DOM refs
+    const avatar      = document.getElementById("avatar");
+    const ph          = document.getElementById("placeholder");
+    const spinner     = document.getElementById("spinner");
+    const phText      = document.getElementById("ph-text");
+    const phHint      = document.getElementById("ph-hint");
+    const card        = document.getElementById("card");
+    const badge       = document.getElementById("badge");
+    const badgeText   = document.getElementById("badge-text");
+    const btnStart    = document.getElementById("btn-start");
+    const btnStop     = document.getElementById("btn-stop");
+    const btnMic      = document.getElementById("btn-mic");
+    const btnLang     = document.getElementById("btn-lang");
+    const volBar      = document.getElementById("vol-bar");
+    const volFill     = document.getElementById("vol-fill");
+    const msgInput    = document.getElementById("msg-input");
+    const btnSend     = document.getElementById("btn-send");
+    const chatLog     = document.getElementById("chat-log");
+    const lectureWrap  = document.getElementById("lecture-wrap");
+    const lectureVid   = document.getElementById("lecture-video");
+    const nvList       = document.getElementById("nv-list");
+    const nvState      = document.getElementById("nv-state");
+    const nvCount      = document.getElementById("nv-count");
+    const lectureTitleText = document.getElementById("lecture-title-text");
+    const lectureMetaDesc  = document.getElementById("lecture-meta-desc");
+
+    let polling = null;
+    let audioCtx = null, audioWs = null, chatWs = null;
+    const OUTPUT_SAMPLE_RATE = 48000;
+
+    // ── Lecture panel ─────────────────────────────────────────
+    let lecturePanelOpen = true;
+    let currentActiveNvItem = null;
+
+    function toggleLecturePanel() {
+      lecturePanelOpen = !lecturePanelOpen;
+      if (lecturePanelOpen) {
+        lectureWrap.classList.remove('collapsed', 'hidden-panel');
+      } else {
+        lectureWrap.classList.add('collapsed');
+      }
+    }
+
+    // Ẩn hẳn panel nhưng vẫn có thể mở lại qua nút "Bài giảng"
+    function hideLecturePanel() {
+      lecturePanelOpen = false;
+      lectureWrap.classList.add('collapsed');
+      if (lectureVid && !lectureVid.paused) lectureVid.pause();
+    }
+
+    // ── HeyGen next videos ────────────────────────────────────
+    let nvNextToken = null;
+    let nvHasMore = false;
+    let nvLoaded = [];
+
+    function fmtDuration(sec) {
+      if (!sec) return '';
+      const m = Math.floor(sec / 60), s = Math.round(sec % 60);
+      return `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    function isNewVideo(createdAt) {
+      if (!createdAt) return false;
+      const sevenDays = 7 * 24 * 3600;
+      return (Date.now() / 1000) - createdAt < sevenDays;
+    }
+
+    function playHeyGenVideo(video, itemEl) {
+      // Cập nhật player
+      lectureVid.src = video.video_url;
+      lectureVid.play().catch(() => {});
+      // Cập nhật tiêu đề & meta
+      lectureTitleText.textContent = video.title || 'Bài giảng HeyGen';
+      lectureMetaDesc.textContent = [
+        video.output_language ? `Ngôn ngữ: ${video.output_language}` : '',
+        video.duration ? `⏱ ${fmtDuration(video.duration)}` : '',
+      ].filter(Boolean).join(' · ');
+      // Đánh dấu active
+      if (currentActiveNvItem) currentActiveNvItem.classList.remove('active');
+      itemEl.classList.add('active');
+      currentActiveNvItem = itemEl;
+      // Mở rộng panel nếu đang thu nhỏ
+      if (!lecturePanelOpen) {
+        lecturePanelOpen = true;
+        lectureWrap.classList.remove('collapsed', 'hidden-panel');
+      }
+    }
+
+    function renderNvItem(video) {
+      const div = document.createElement('div');
+      div.className = 'nv-item';
+      div.id = `nv-item-${video.id}`;
+
+      const thumbHtml = video.thumbnail_url
+        ? `<img class="nv-thumb" src="${video.thumbnail_url}" alt="${video.title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="nv-thumb-placeholder" style="display:none">🎬</div>`
+        : `<div class="nv-thumb-placeholder">🎬</div>`;
+
+      const badgeHtml = isNewVideo(video.created_at)
+        ? `<span class="nv-badge-new">Mới</span>` : '';
+      const durHtml = video.duration
+        ? `<span class="nv-duration">⏱ ${fmtDuration(video.duration)}</span>` : '';
+
+      div.innerHTML = `
+        ${thumbHtml}
+        <div class="nv-info">
+          <div class="nv-title">${video.title || 'Bài giảng'}</div>
+          <div class="nv-meta-row">${durHtml}${badgeHtml}</div>
+        </div>`;
+
+      div.addEventListener('click', () => playHeyGenVideo(video, div));
+      return div;
+    }
+
+    function renderNvLoadMore() {
+      const btn = document.createElement('div');
+      btn.className = 'nv-load-more';
+      btn.id = 'nv-load-more-btn';
+      btn.textContent = 'Xem thêm...';
+      btn.addEventListener('click', () => fetchHeyGenVideos(nvNextToken));
+      return btn;
+    }
+
+    async function fetchHeyGenVideos(token = null) {
+      // Hiện trạng loading nếu là lần đầu
+      if (!token) {
+        nvState.style.display = 'flex';
+        nvState.innerHTML = '<div class="nv-spinner"></div><span>Đang tải danh sách...</span>';
+        // Xóa danh sách cũ
+        Array.from(nvList.children).forEach(c => { if (c !== nvState) nvList.removeChild(c); });
+        nvLoaded = [];
+      } else {
+        const loadMoreBtn = document.getElementById('nv-load-more-btn');
+        if (loadMoreBtn) loadMoreBtn.textContent = 'Đang tải...';
+      }
+
+      try {
+        let url = `${BASE}/api/heygen/videos?limit=20`;
+        if (token) url += `&token=${encodeURIComponent(token)}`;
+
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        // Ẩn state
+        nvState.style.display = 'none';
+
+        // Xóa load-more cũ nếu có
+        const oldLoadMore = document.getElementById('nv-load-more-btn');
+        if (oldLoadMore) oldLoadMore.remove();
+
+        if (data.error) {
+          nvState.style.display = 'flex';
+          nvState.innerHTML = `<span>⚠️ ${data.error}</span><button class="nv-retry-btn" onclick="fetchHeyGenVideos()">Thử lại</button>`;
+          return;
+        }
+
+        const videos = data.data || [];
+        nvLoaded = [...nvLoaded, ...videos];
+        nvCount.textContent = nvLoaded.length > 0 ? `${nvLoaded.length} video` : '—';
+
+        if (videos.length === 0 && nvLoaded.length === 0) {
+          nvState.style.display = 'flex';
+          nvState.innerHTML = '<span>Không có bài giảng nào trên HeyGen</span>';
+          return;
+        }
+
+        videos.forEach(v => nvList.appendChild(renderNvItem(v)));
+
+        nvHasMore = data.has_more || false;
+        nvNextToken = data.next_token || null;
+        if (nvHasMore && nvNextToken) {
+          nvList.appendChild(renderNvLoadMore());
+        }
+
+      } catch (err) {
+        nvState.style.display = 'flex';
+        nvState.innerHTML = `<span>❌ Lỗi kết nối API</span><button class="nv-retry-btn" onclick="fetchHeyGenVideos()">Thử lại</button>`;
+      }
+    }
+
+    // Tự động tải danh sách khi trang load
+    fetchHeyGenVideos();
+
+    // ── Language mode ─────────────────────────────────────────
+    let langMode = 'en';
+
+    function toggleLang() {
+      if (micActive) { toast('⚠️ Tắt mic trước khi đổi ngôn ngữ'); return; }
+      langMode = langMode === 'en' ? 'vi' : 'en';
+      if (langMode === 'vi') {
+        btnLang.textContent = '🇻🇳 VI';
+        btnLang.classList.add('vi');
+        toast('🇻🇳 Chuyển sang nhận tiếng Việt');
+      } else {
+        btnLang.textContent = '🇬🇧 EN';
+        btnLang.classList.remove('vi');
+        toast('🇬🇧 Chuyển sang nhận tiếng Anh');
+      }
+    }
+
+    // ── Mic (AudioWorklet + WebSocket) ────────────────────────
+    const MIC_SAMPLE_RATE = 16000;
+    const MIC_CHANNELS    = 1;
+    let micStream = null, micCtx = null, micWs = null, micNode = null;
+    let micActive = false;
+
+    const WORKLET_CODE = `
+      class PcmProcessor extends AudioWorkletProcessor {
+        constructor() {
+          super();
+          this._buf = [];
+          this._chunkSize = 1600; // 100ms @ 16kHz
+        }
+        process(inputs) {
+          const ch = inputs[0][0];
+          if (!ch) return true;
+          for (let i = 0; i < ch.length; i++) this._buf.push(ch[i]);
+          while (this._buf.length >= this._chunkSize) {
+            const chunk = this._buf.splice(0, this._chunkSize);
+            const int16 = new Int16Array(this._chunkSize);
+            for (let i = 0; i < this._chunkSize; i++) {
+              int16[i] = Math.max(-32768, Math.min(32767, Math.round(chunk[i] * 32767)));
+            }
+            this.port.postMessage(int16.buffer, [int16.buffer]);
+          }
+          return true;
+        }
+      }
+      registerProcessor('pcm-processor', PcmProcessor);
+    `;
+
+    async function startMic() {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: {
+        sampleRate: MIC_SAMPLE_RATE, channelCount: MIC_CHANNELS,
+        echoCancellation: true, noiseSuppression: true, autoGainControl: true,
+      }});
+
+      micCtx = new AudioContext({ sampleRate: MIC_SAMPLE_RATE });
+      const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
+      const wUrl = URL.createObjectURL(blob);
+      await micCtx.audioWorklet.addModule(wUrl);
+      URL.revokeObjectURL(wUrl);
+
+      const wsUrl = langMode === 'vi'
+        ? `ws://localhost:8000/stt?sample_rate=${MIC_SAMPLE_RATE}&channels=${MIC_CHANNELS}&lang=vi&chunk_ms=2000`
+        : `ws://localhost:8000/mic?sample_rate=${MIC_SAMPLE_RATE}&channels=${MIC_CHANNELS}`;
+
+      micWs = new WebSocket(wsUrl);
+      micWs.binaryType = 'arraybuffer';
+      micWs.onopen  = () => console.log(`[MIC] WS open (${langMode})`);
+      micWs.onerror = (e) => { console.error('Mic WS error', e); stopMic(); };
+      micWs.onclose = () => { if (micActive) stopMic(); };
+
+      await new Promise((res, rej) => {
+        if (micWs.readyState === 1) return res();
+        micWs.addEventListener('open',  res, { once: true });
+        micWs.addEventListener('error', rej, { once: true });
+      });
+
+      const source   = micCtx.createMediaStreamSource(micStream);
+      micNode        = new AudioWorkletNode(micCtx, 'pcm-processor');
+      const analyser = micCtx.createAnalyser();
+      analyser.fftSize = 256;
+      const dataArr  = new Uint8Array(analyser.frequencyBinCount);
+
+      source.connect(analyser);
+      source.connect(micNode);
+
+      micNode.port.onmessage = (e) => {
+        if (micWs && micWs.readyState === 1) micWs.send(e.data);
+      };
+
+      function drawVolume() {
+        if (!micActive) return;
+        analyser.getByteFrequencyData(dataArr);
+        const avg = dataArr.reduce((s, v) => s + v, 0) / dataArr.length;
+        volFill.style.width = Math.min(100, avg * 2) + '%';
+        requestAnimationFrame(drawVolume);
+      }
+      drawVolume();
+
+      micActive = true;
+      btnMic.classList.add('active');
+      btnMic.title = 'Tắt microphone';
+      volBar.classList.add('visible');
+    }
+
+    function stopMic() {
+      micActive = false;
+      if (langMode === 'vi' && micWs && micWs.readyState === 1) micWs.send('flush');
+      if (micNode)   { micNode.disconnect(); micNode = null; }
+      if (micCtx)    { micCtx.close(); micCtx = null; }
+      if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+      if (micWs)     { micWs.close(); micWs = null; }
+      btnMic.classList.remove('active');
+      btnMic.title = 'Bật microphone';
+      volBar.classList.remove('visible');
+      volFill.style.width = '0%';
+    }
+
+    async function toggleMic() {
+      if (micActive) { stopMic(); toast('🔇 Micro đã tắt'); }
+      else {
+        try { await startMic(); toast('🎤 Micro đang bật'); }
+        catch (err) { console.error(err); toast('❌ Không thể truy cập micro: ' + err.message); }
+      }
+    }
+
+    // ── Chat UI ───────────────────────────────────────────────
+    const bubbles = {}, streamContent = {};
+
+    function addOrUpdateBubble(id, role, content, endOfSpeech) {
+      const chatEmpty = document.getElementById('chat-empty');
+      if (chatEmpty) chatEmpty.style.display = 'none';
+      if (!bubbles[id]) {
+        const msg = document.createElement('div');
+        msg.className = `msg ${role}`;
+        msg.innerHTML = `
+          <div class="msg-role">${role === 'user' ? 'Bạn' : 'Avatar'}</div>
+          <div class="msg-bubble streaming"></div>`;
+        chatLog.appendChild(msg);
+        bubbles[id] = { el: msg, bubbleEl: msg.querySelector('.msg-bubble') };
+        chatLog.scrollTop = chatLog.scrollHeight;
+      }
+      const bubble = bubbles[id].bubbleEl;
+      bubble.textContent = content;
+      if (endOfSpeech) bubble.classList.remove('streaming');
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function handleChatEvent(e) {
+      const data = JSON.parse(e.data);
+      if (data.type !== 'stream') return;
+      const { id, role, content, content_index, end_of_speech } = data;
+      if (content_index === 0) streamContent[id] = content;
+      else streamContent[id] = (streamContent[id] || '') + content;
+      addOrUpdateBubble(id, role, streamContent[id], end_of_speech);
+    }
+
+    function startChat() {
+      chatWs = new WebSocket('ws://localhost:8000/chat');
+      chatWs.onmessage = handleChatEvent;
+      chatWs.onerror = () => console.warn('Chat WS error');
+    }
+    function stopChat() { if (chatWs) { chatWs.close(); chatWs = null; } }
+    function clearChat() {
+      chatLog.innerHTML = '<div class="chat-empty" id="chat-empty">Chưa có tin nhắn nào</div>';
+      Object.keys(bubbles).forEach(k => delete bubbles[k]);
+      Object.keys(streamContent).forEach(k => delete streamContent[k]);
+    }
+
+    // ── Audio output ──────────────────────────────────────────
+    function startAudio() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: OUTPUT_SAMPLE_RATE });
+      audioWs  = new WebSocket('ws://localhost:8000/audio');
+      audioWs.binaryType = 'arraybuffer';
+      let nextTime = 0;
+      audioWs.onmessage = (e) => {
+        const raw = new Int16Array(e.data);
+        const numFrames = raw.length / 2;
+        const buf = audioCtx.createBuffer(2, numFrames, OUTPUT_SAMPLE_RATE);
+        const L = buf.getChannelData(0), R = buf.getChannelData(1);
+        for (let i = 0; i < numFrames; i++) {
+          L[i] = raw[i * 2] / 32768;
+          R[i] = raw[i * 2 + 1] / 32768;
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf; src.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+        if (nextTime < now) nextTime = now + 0.05;
+        src.start(nextTime);
+        nextTime += buf.duration;
+      };
+    }
+    function stopAudio() {
+      if (audioWs)  { audioWs.close(); audioWs = null; }
+      if (audioCtx) { audioCtx.close(); audioCtx = null; }
+    }
+
+    // ── Toast ─────────────────────────────────────────────────
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // ── Session state ─────────────────────────────────────────
+    function setLive(live) {
+      if (live) {
+        avatar.src = `${BASE}/video?t=${Date.now()}`;
+        ph.classList.add('hidden');
+        card.classList.add('live');
+        badge.classList.add('live');
+        badgeText.textContent = 'Live';
+        msgInput.disabled = false;
+        btnSend.disabled   = false;
+        btnStop.disabled   = false;
+        btnMic.disabled    = false;
+        btnLang.disabled   = false;
+        btnStart.disabled  = true;
+        startAudio();
+        startChat();
+        // Thu nhỏ lecture panel khi avatar lên live
+        hideLecturePanel();
+        toast('✅ Kết nối thành công — bắt đầu hỏi Avatar!');
+      } else {
+        avatar.src = '';
+        ph.classList.remove('hidden');
+        spinner.style.display = 'none';
+        phText.textContent = 'Nhấn Start để bắt đầu';
+        phHint.style.display = '';
+        card.classList.remove('live');
+        badge.classList.remove('live');
+        badgeText.textContent = 'Offline';
+        msgInput.disabled = true;
+        btnSend.disabled  = true;
+        btnStop.disabled  = true;
+        btnMic.disabled   = true;
+        btnLang.disabled  = true;
+        btnStart.disabled = false;
+        stopMic();
+        stopAudio();
+        stopChat();
+      }
+    }
+
+    // ── Session actions ───────────────────────────────────────
+    async function startSession() {
+      btnStart.disabled = true;
+      spinner.style.display = 'block';
+      phText.textContent = 'Đang kết nối...';
+      phHint.style.display = 'none';
+      clearChat();
+      await fetch(`${BASE}/start`, { method: 'POST' });
+      toast('⏳ Đang kết nối Anam...');
+      polling = setInterval(async () => {
+        try {
+          const r = await fetch(`${BASE}/status`);
+          const d = await r.json();
+          if (d.connected) { clearInterval(polling); setLive(true); }
+        } catch {}
+      }, 1000);
+    }
+
+    async function stopSession() {
+      clearInterval(polling);
+      await fetch(`${BASE}/stop`, { method: 'POST' });
+      setLive(false);
+      toast('🛑 Đã dừng kết nối');
+    }
+
+    async function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+      msgInput.value = '';
+      const r = await fetch(`${BASE}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const d = await r.json();
+      if (!d.ok) toast(`❌ ${d.message}`);
+    }
+    // ── Subtitle sync system ──────────────────────────────────
+    let subtitlesCues = [];      // [{start, end, vi, en}, ...]
+    let currentCueIdx = -1;
+    let showSubVi = true;
+    let showSubEn = true;
+
+    const subViEl = document.getElementById('sub-vi');
+    const subEnEl = document.getElementById('sub-en');
+    const btnSubVi = document.getElementById('btn-sub-vi');
+    const btnSubEn = document.getElementById('btn-sub-en');
+
+    function toggleSubLang(lang) {
+      if (lang === 'vi') {
+        showSubVi = !showSubVi;
+        btnSubVi.classList.toggle('active', showSubVi);
+        subViEl.style.display = showSubVi ? '' : 'none';
+      } else {
+        showSubEn = !showSubEn;
+        btnSubEn.classList.toggle('active', showSubEn);
+        subEnEl.style.display = showSubEn ? '' : 'none';
+      }
+    }
+
+    function parseSrtTime(str) {
+      // "00:00:03,459" -> seconds
+      const [hms, ms] = str.trim().split(',');
+      const [h, m, s] = hms.split(':').map(Number);
+      return h * 3600 + m * 60 + s + parseInt(ms) / 1000;
+    }
+
+    function parseBilingualSrt(text) {
+      // Parse SRT where each cue has 2 text lines: VI then EN
+      const blocks = text.trim().split(/\n\s*\n/);
+      const cues = [];
+      for (const block of blocks) {
+        const lines = block.trim().split('\n');
+        if (lines.length < 3) continue;
+        // lines[0] = index, lines[1] = timecode, lines[2+] = text
+        const timeParts = lines[1].split('-->');
+        if (timeParts.length !== 2) continue;
+        const start = parseSrtTime(timeParts[0]);
+        const end   = parseSrtTime(timeParts[1]);
+        const vi    = lines[2] || '';
+        const en    = lines.length >= 4 ? lines[3] : '';
+        cues.push({ start, end, vi, en });
+      }
+      return cues;
+    }
+
+    async function loadSubtitles() {
+      try {
+        // Try bilingual SRT first
+        const resp = await fetch(`${BASE}/subtitles/subtitle_vi_en.srt`);
+        if (resp.ok) {
+          const text = await resp.text();
+          subtitlesCues = parseBilingualSrt(text);
+          console.log(`[SUB] Loaded ${subtitlesCues.length} bilingual cues`);
+        } else {
+          console.log('[SUB] Bilingual SRT not found');
+        }
+      } catch (e) {
+        console.log('[SUB] Error loading subtitles:', e);
+      }
+    }
+
+    function updateSubtitle(currentTime) {
+      if (!subtitlesCues.length) return;
+
+      // Find active cue
+      let foundIdx = -1;
+      for (let i = 0; i < subtitlesCues.length; i++) {
+        const c = subtitlesCues[i];
+        if (currentTime >= c.start && currentTime < c.end) {
+          foundIdx = i;
+          break;
+        }
+      }
+
+      if (foundIdx === currentCueIdx) return; // No change
+      currentCueIdx = foundIdx;
+
+      if (foundIdx === -1) {
+        // No active cue
+        subViEl.textContent = '';
+        subEnEl.textContent = '';
+        subViEl.classList.add('empty');
+        subEnEl.classList.add('empty');
+        subViEl.textContent = 'Phụ đề sẽ hiện ở đây khi video phát...';
+        subEnEl.textContent = 'Subtitles will appear here when playing...';
+      } else {
+        const cue = subtitlesCues[foundIdx];
+        subViEl.classList.remove('empty');
+        subEnEl.classList.remove('empty');
+
+        // Trigger fade animation
+        subViEl.classList.remove('animating');
+        subEnEl.classList.remove('animating');
+        void subViEl.offsetWidth; // Force reflow
+        subViEl.classList.add('animating');
+        subEnEl.classList.add('animating');
+
+        subViEl.textContent = cue.vi;
+        subEnEl.textContent = cue.en;
+      }
+    }
+
+    // Hook into lecture video timeupdate
+    lectureVid.addEventListener('timeupdate', () => {
+      updateSubtitle(lectureVid.currentTime);
+    });
+
+    // Reset on seek
+    lectureVid.addEventListener('seeked', () => {
+      currentCueIdx = -1;
+      updateSubtitle(lectureVid.currentTime);
+    });
+
+    // Load subtitles on page load
+    loadSubtitles();
+
+  </script>
+</body>
+</html>
