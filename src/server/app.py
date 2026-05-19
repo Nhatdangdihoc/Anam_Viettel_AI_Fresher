@@ -32,6 +32,8 @@ WEB_DIR = PROJECT_ROOT / "web"
 ASSETS_DIR = PROJECT_ROOT / "assets"
 DATA_DIR = PROJECT_ROOT / "data"
 SRT_DIR = DATA_DIR / "output" / "srt"
+SRT_CACHE_DIR = DATA_DIR / "output" / "srt" / "cache"
+SUMMARY_CACHE_DIR = DATA_DIR / "output" / "summary"
 VIDEOS_DIR = DATA_DIR / "videos"
 VIDEO_ITEMS_DIR = DATA_DIR / "video-item"
 
@@ -45,6 +47,7 @@ load_dotenv(env_path)
 ANAM_API_KEY = os.getenv("ANAM_API_KEY")
 ANAM_PERSONA_ID = os.getenv("ANAM_PERSONA_ID")
 HEYGEN_API_KEY = os.getenv("HEYGEN_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 if not ANAM_API_KEY or not ANAM_PERSONA_ID:
     raise ValueError("❌ Thiếu ANAM_API_KEY hoặc ANAM_PERSONA_ID trong file .env")
@@ -269,6 +272,7 @@ async def list_local_videos():
             "size_mb": round(size_mb, 1),
             "has_script": script_file is not None,
             "source": "local",
+            "item_id": item_dir.name,
         })
 
     return JSONResponse(content={"data": items})
@@ -413,6 +417,82 @@ async def load_subtitles_api(body: dict):
     """
     subtitle_url = body.get("subtitle_url")
     video_url = body.get("video_url")
+    item_id = body.get("item_id")  # For local video caching
+    video_id = body.get("video_id")  # For HeyGen video caching
+
+    # ── Cách 0: Local video → check cache trước ──────────────────────
+    if item_id:
+        srt_cache_dir = VIDEO_ITEMS_DIR / item_id / "srt"
+        srt_cache_file = srt_cache_dir / "subtitle_vi_en.srt"
+        if srt_cache_file.exists():
+            print(f"[SUB] Cache hit for {item_id}")
+            from src.pipeline.cleaner import clean_text
+            cached = srt_cache_file.read_text(encoding="utf-8")
+            cached = clean_text(cached)
+            return JSONResponse(content={
+                "ok": True,
+                "srt": cached,
+                "source": "local-cache",
+            })
+
+        # Cache miss → find video file for Whisper processing
+        item_dir = VIDEO_ITEMS_DIR / item_id
+        video_dir = item_dir / "video"
+        if video_dir.exists():
+            for f in video_dir.iterdir():
+                if f.suffix.lower() in (".mp4", ".webm", ".mkv"):
+                    # Process via Whisper + translate, then cache
+                    print(f"[SUB] Cache miss for {item_id}, processing with Whisper...")
+                    loop = asyncio.get_event_loop()
+
+                    def run_local_whisper(vpath=str(f), cache_path=str(srt_cache_file), cache_dir=str(srt_cache_dir)):
+                        from src.pipeline.transcriber import transcribe_video
+                        from src.pipeline.srt_formatter import segments_to_bilingual_srt
+                        from src.pipeline.cleaner import clean_segments
+                        from src.pipeline.translator import translate_sentences
+
+                        segments = transcribe_video(vpath, language="vi", model_name="small")
+                        segments = clean_segments(segments)
+                        vi_texts = [seg["text"].strip() for seg in segments]
+                        print(f"[SUB] Translating {len(vi_texts)} segments VI->EN...")
+                        en_texts = translate_sentences(vi_texts, src="vi", dest="en", delay=0.2)
+                        srt = segments_to_bilingual_srt(segments, en_texts)
+                        # Save cache
+                        os.makedirs(cache_dir, exist_ok=True)
+                        with open(cache_path, "w", encoding="utf-8") as fp:
+                            fp.write(srt)
+                        print(f"[SUB] Cached SRT → {cache_path}")
+                        return srt
+
+                    try:
+                        srt_text = await loop.run_in_executor(_thread_pool, run_local_whisper)
+                        return JSONResponse(content={
+                            "ok": True,
+                            "srt": srt_text,
+                            "source": "whisper-cached",
+                        })
+                    except Exception as e:
+                        import traceback
+                        traceback.print_exc()
+                        return JSONResponse(
+                            status_code=500,
+                            content={"ok": False, "error": f"Lỗi Whisper local: {e}"}
+                        )
+                    break
+
+    # ── Cache check cho HeyGen video (theo video_id) ───────────────
+    if video_id and not item_id:
+        heygen_cache = SRT_CACHE_DIR / f"{video_id}_vi_en.srt"
+        if heygen_cache.exists():
+            print(f"[SUB] HeyGen cache hit for {video_id}")
+            from src.pipeline.cleaner import clean_text
+            cached = heygen_cache.read_text(encoding="utf-8")
+            cached = clean_text(cached)
+            return JSONResponse(content={
+                "ok": True,
+                "srt": cached,
+                "source": "heygen-cache",
+            })
 
     # Cach 1: Fetch SRT tu HeyGen -> parse + dich EN->VI -> tra cues bilingual
     if subtitle_url:
@@ -448,6 +528,13 @@ async def load_subtitles_api(body: dict):
 
             bilingual_srt = "\n".join(srt_lines)
             print(f"[SUB] Done! {len(cues)} bilingual cues ready")
+
+            # Cache HeyGen SRT for future loads
+            if video_id:
+                os.makedirs(str(SRT_CACHE_DIR), exist_ok=True)
+                cache_path = SRT_CACHE_DIR / f"{video_id}_vi_en.srt"
+                cache_path.write_text(bilingual_srt, encoding="utf-8")
+                print(f"[SUB] Cached HeyGen SRT → {cache_path}")
 
             return JSONResponse(content={
                 "ok": True,
@@ -513,6 +600,13 @@ async def load_subtitles_api(body: dict):
             except OSError:
                 pass
 
+            # Cache Whisper SRT for HeyGen videos
+            if video_id:
+                os.makedirs(str(SRT_CACHE_DIR), exist_ok=True)
+                cache_path = SRT_CACHE_DIR / f"{video_id}_vi_en.srt"
+                cache_path.write_text(srt_text, encoding="utf-8")
+                print(f"[SUB] Cached Whisper SRT → {cache_path}")
+
             print(f"[SUB] Whisper done! Generated SRT")
             return JSONResponse(content={
                 "ok": True,
@@ -529,8 +623,178 @@ async def load_subtitles_api(body: dict):
 
     return JSONResponse(
         status_code=400,
-        content={"ok": False, "error": "Cần subtitle_url hoặc video_url"}
+        content={"ok": False, "error": "Cần subtitle_url, video_url hoặc item_id"}
     )
+
+
+# ─── Lecture Summarization ─────────────────────────────────────────────────────
+
+async def _call_groq_summarize(cleaned: str, label: str, summary_cache: Path, lang: str = "vi") -> JSONResponse:
+    """Helper: Gọi Groq API để tóm tắt và cache kết quả."""
+    if not GROQ_API_KEY:
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": "Chưa cấu hình GROQ_API_KEY trong .env"}
+        )
+
+    # System prompt theo ngôn ngữ
+    if lang == "en":
+        system_prompt = (
+            "You are a professional lecture summarizer. "
+            "Summarize the lecture content in English with clear structure and main topics. "
+            "Use markdown format: ## headings, bullet points, and bold for key terms. "
+            "Keep it concise yet comprehensive, around 300-500 words."
+        )
+        user_prompt = f"Please summarize the following lecture:\n\n{cleaned[:6000]}"
+    else:
+        system_prompt = (
+            "Bạn là trợ lý tóm tắt bài giảng chuyên nghiệp. "
+            "Hãy tóm tắt nội dung bài giảng bằng tiếng Việt, có cấu trúc rõ ràng với các mục chính. "
+            "Dùng markdown format: tiêu đề ##, bullet points, và bold cho từ khóa quan trọng. "
+            "Tóm tắt ngắn gọn, đầy đủ ý chính, khoảng 300-500 từ."
+        )
+        user_prompt = f"Hãy tóm tắt bài giảng sau:\n\n{cleaned[:6000]}"
+
+    try:
+        print(f"[SUM] Summarizing ({lang}) for {label} via Groq...")
+        async with httpx.AsyncClient(timeout=60.0) as c:
+            resp = await c.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 1500,
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+        summary = data["choices"][0]["message"]["content"]
+
+        # Cache summary
+        os.makedirs(str(summary_cache.parent), exist_ok=True)
+        summary_cache.write_text(summary, encoding="utf-8")
+        print(f"[SUM] Done! Cached → {summary_cache}")
+
+        return JSONResponse(content={
+            "ok": True,
+            "summary": summary,
+            "source": "groq",
+        })
+
+    except httpx.HTTPStatusError as e:
+        error_text = e.response.text[:200] if e.response else str(e)
+        print(f"[SUM] Groq API error: {error_text}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": f"Groq API lỗi: {error_text}"}
+        )
+    except Exception as e:
+        print(f"[SUM] Summarize error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": f"Lỗi tóm tắt: {e}"}
+        )
+
+
+@app.post("/api/summarize")
+async def summarize_lecture(body: dict):
+    """
+    Tóm tắt bài giảng từ script/SRT.
+    Hỗ trợ cả local video (item_id) và HeyGen video (video_id).
+    Sử dụng Groq API (llama-3.3-70b-versatile) hoặc cache nếu có.
+    """
+    item_id = body.get("item_id")
+    video_id = body.get("video_id")
+    lang = body.get("lang", "vi")  # "vi" hoặc "en"
+    if lang not in ("vi", "en"):
+        lang = "vi"
+
+    if not item_id and not video_id:
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "error": "Cần item_id hoặc video_id"}
+        )
+
+    from src.pipeline.cleaner import clean_script
+
+    # ── Path A: Local video (item_id) ─────────────────────────────────
+    if item_id:
+        item_dir = VIDEO_ITEMS_DIR / item_id
+        if not item_dir.exists():
+            return JSONResponse(
+                status_code=404,
+                content={"ok": False, "error": "Video item không tồn tại"}
+            )
+
+        # Check cache (theo ngôn ngữ)
+        summary_cache = item_dir / f"summary_{lang}.txt"
+        if summary_cache.exists():
+            print(f"[SUM] Cache hit for {item_id} ({lang})")
+            return JSONResponse(content={
+                "ok": True,
+                "summary": summary_cache.read_text(encoding="utf-8"),
+                "source": "cache",
+            })
+
+        # Read script
+        script_dir = item_dir / "script"
+        script_text = None
+        if script_dir.exists():
+            for f in script_dir.iterdir():
+                if f.suffix.lower() == ".txt":
+                    script_text = f.read_text(encoding="utf-8")
+                    break
+
+        if not script_text:
+            # Fallback: read from cached SRT
+            srt_cache = item_dir / "srt" / "subtitle_vi_en.srt"
+            if srt_cache.exists():
+                script_text = srt_cache.read_text(encoding="utf-8")
+
+        if not script_text:
+            return JSONResponse(
+                status_code=404,
+                content={"ok": False, "error": "Không tìm thấy script cho video này. Hãy tải phụ đề trước."}
+            )
+
+        cleaned = clean_script(script_text)
+        return await _call_groq_summarize(cleaned, item_id, summary_cache, lang)
+
+    # ── Path B: HeyGen video (video_id) ───────────────────────────────
+    if video_id:
+        os.makedirs(str(SUMMARY_CACHE_DIR), exist_ok=True)
+        summary_cache = SUMMARY_CACHE_DIR / f"{video_id}_{lang}.txt"
+
+        # Check cache
+        if summary_cache.exists():
+            print(f"[SUM] HeyGen cache hit for {video_id} ({lang})")
+            return JSONResponse(content={
+                "ok": True,
+                "summary": summary_cache.read_text(encoding="utf-8"),
+                "source": "cache",
+            })
+
+        # Read from cached SRT
+        srt_cache = SRT_CACHE_DIR / f"{video_id}_vi_en.srt"
+        if srt_cache.exists():
+            script_text = srt_cache.read_text(encoding="utf-8")
+        else:
+            return JSONResponse(
+                status_code=404,
+                content={"ok": False, "error": "Chưa có phụ đề cho video này. Hãy tải phụ đề trước khi tóm tắt."}
+            )
+
+        cleaned = clean_script(script_text)
+        return await _call_groq_summarize(cleaned, video_id, summary_cache, lang)
 
 
 # ─── Audio INPUT endpoints ────────────────────────────────────────────────────

@@ -323,6 +323,101 @@
     }
     .nv-load-more:hover { background: rgba(0,0,0,0.08); color: var(--text); }
 
+    /* ── Side panel tabs ────────────────────────────────── */
+    .side-panel-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
+    }
+    .side-panel-tab {
+      flex: 1; padding: 10px 8px; cursor: pointer; border: none;
+      background: transparent; font-family: 'Roboto', sans-serif;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--muted);
+      border-bottom: 2px solid transparent; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .side-panel-tab:hover { color: var(--text); background: rgba(0,0,0,0.02); }
+    .side-panel-tab.active {
+      color: var(--accent); border-bottom-color: var(--accent);
+      background: rgba(238,0,51,0.04);
+    }
+    .side-tab-content { display: none; flex: 1; overflow: hidden; min-height: 0; }
+    .side-tab-content.active { display: flex; flex-direction: column; }
+
+    /* ── Summary panel ─────────────────────────────────── */
+    .summary-content {
+      flex: 1; overflow-y: auto; padding: 14px;
+      font-family: 'Roboto', sans-serif; font-size: 12px;
+      line-height: 1.7; color: var(--text);
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    .summary-content::-webkit-scrollbar { width: 4px; }
+    .summary-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .summary-content h2 {
+      font-size: 13px; font-weight: 800; color: var(--accent);
+      margin: 12px 0 6px; letter-spacing: -0.01em;
+    }
+    .summary-content h2:first-child { margin-top: 0; }
+    .summary-content h3 {
+      font-size: 12px; font-weight: 700; color: var(--text);
+      margin: 10px 0 4px;
+    }
+    .summary-content ul { padding-left: 16px; margin: 4px 0; }
+    .summary-content li { margin-bottom: 3px; }
+    .summary-content strong { color: var(--accent2); }
+    .summary-content p { margin: 6px 0; }
+    .summary-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 8px; padding: 30px 14px;
+      color: var(--muted); text-align: center; flex: 1;
+    }
+    .summary-empty-icon { font-size: 28px; opacity: 0.5; }
+    .summary-empty-text { font-size: 12px; }
+    /* Summary container — enables scroll */
+    #summary-container {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden; min-height: 0;
+    }
+    .btn-summarize {
+      font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 6px 16px; border-radius: 8px; cursor: pointer; border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; transition: all 0.2s; margin-top: 8px;
+    }
+    .btn-summarize:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-summarize:disabled { opacity: 0.4; cursor: wait; transform: none; }
+    .summary-loading {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 10px; padding: 30px; flex: 1;
+    }
+    .summary-loading .spinner { width: 24px; height: 24px; }
+    /* Summary header with lang toggle */
+    .summary-header {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .summary-header-title {
+      flex: 1; font-family: 'Roboto', sans-serif; font-size: 10px;
+      font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted2);
+    }
+    .summary-lang-toggle {
+      font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 6px; cursor: pointer; border: none;
+      background: rgba(238,0,51,0.10); color: var(--accent);
+      border: 1px solid rgba(238,0,51,0.2);
+      transition: all 0.2s;
+    }
+    .summary-lang-toggle:hover { background: rgba(238,0,51,0.20); }
+    .summary-lang-toggle.active {
+      background: var(--accent); color: #fff;
+    }
+
     /* Responsive: trên mobile, panel xếp dọc */
     @media (max-width: 780px) {
       .lecture-body { flex-direction: column; }
@@ -335,10 +430,17 @@
     /* ── Main area ────────────────────────────────────────────── */
     .app {
       position: relative; z-index: 1;
-      display: flex; gap: 16px; width: 100%; max-width: 1100px;
-      align-items: flex-start;
+      display: flex; flex-direction: column; gap: 14px;
+      width: 100%; max-width: 1100px;
     }
-    .left { display: flex; flex-direction: column; gap: 14px; flex: 1; min-width: 0; }
+    /* Wrapper for card+chat to align their tops and bottoms */
+    .app-main-row {
+      display: flex; gap: 16px; width: 100%;
+      align-items: stretch;
+    }
+    .app-main-left {
+      flex: 1; min-width: 0; display: flex; flex-direction: column;
+    }
 
     .label {
       font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700;
@@ -353,7 +455,7 @@
       border: 1px solid var(--border);
       background: var(--surface);
       box-shadow: 0 32px 80px rgba(0,0,0,0.6);
-      width: 100%; aspect-ratio: 16/9;
+      width: 100%; flex: 1; min-height: 280px;
     }
     .card::before {
       content: ''; position: absolute; inset: -1px; border-radius: 21px;
@@ -458,6 +560,7 @@
       width: 300px; flex-shrink: 0;
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 20px; overflow: hidden;
+      align-self: stretch;
     }
     .chat-header {
       padding: 14px 16px; border-bottom: 1px solid var(--border);
@@ -469,7 +572,7 @@
     #chat-log {
       flex: 1; overflow-y: auto; padding: 14px 12px;
       display: flex; flex-direction: column; gap: 10px;
-      min-height: 280px; max-height: 380px;
+      min-height: 0;
       scrollbar-width: thin; scrollbar-color: var(--border) transparent;
     }
     #chat-log::-webkit-scrollbar { width: 4px; }
@@ -513,7 +616,7 @@
 
     /* ── Responsive ───────────────────────────────────────────── */
     @media (max-width: 780px) {
-      .app { flex-direction: column; }
+      .app-main-row { flex-direction: column; }
       .right { width: 100%; }
       #chat-log { min-height: 180px; max-height: 240px; }
       .lecture-wrap { border-radius: 16px; }
@@ -582,17 +685,52 @@
 
       </div>
 
-      <!-- Next videos panel -->
+      <!-- Side panel with tabs -->
       <div class="next-videos-panel">
-        <div class="next-videos-header">
-          <span class="next-videos-header-icon">📋</span>
-          <span class="next-videos-header-title">Danh sách video</span>
-          <span class="next-videos-header-count" id="nv-count">—</span>
+        <!-- Tab buttons -->
+        <div class="side-panel-tabs">
+          <button class="side-panel-tab active" onclick="switchSideTab('videos')" id="tab-btn-videos">
+            📚 Bài giảng
+          </button>
+          <button class="side-panel-tab" onclick="switchSideTab('summary')" id="tab-btn-summary">
+            📝 Tóm tắt
+          </button>
         </div>
-        <div class="next-videos-list" id="nv-list">
-          <div class="next-videos-state" id="nv-state">
-            <div class="nv-spinner"></div>
-            <span>Đang tải danh sách...</span>
+
+        <!-- Tab 1: Danh sách bài giảng -->
+        <div class="side-tab-content active" id="tab-content-videos">
+          <div class="next-videos-header">
+            <span class="next-videos-header-icon">📋</span>
+            <span class="next-videos-header-title">Danh sách bài giảng</span>
+            <span class="next-videos-header-count" id="nv-count">—</span>
+          </div>
+          <div class="next-videos-list" id="nv-list">
+            <div class="next-videos-state" id="nv-state">
+              <div class="nv-spinner"></div>
+              <span>Đang tải danh sách...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Tóm tắt bài giảng -->
+        <div class="side-tab-content" id="tab-content-summary">
+          <div class="summary-header">
+            <span style="font-size:14px">📝</span>
+            <span class="summary-header-title">Ngôn ngữ tóm tắt</span>
+            <button class="summary-lang-toggle active" id="btn-sum-vi" onclick="toggleSummaryLang('vi')">VI</button>
+            <button class="summary-lang-toggle" id="btn-sum-en" onclick="toggleSummaryLang('en')">EN</button>
+          </div>
+          <div id="summary-container">
+            <div class="summary-empty" id="summary-empty">
+              <span class="summary-empty-icon">📝</span>
+              <span class="summary-empty-text">Chọn video rồi bấm nút bên dưới để tóm tắt (cần tải phụ đề trước cho video HeyGen)</span>
+              <button class="btn-summarize" id="btn-summarize" onclick="loadSummary()">Tóm tắt bài giảng</button>
+            </div>
+            <div class="summary-loading" id="summary-loading" style="display:none">
+              <div class="spinner"></div>
+              <span style="font-size:12px;color:var(--muted)">AI đang tóm tắt bài giảng...</span>
+            </div>
+            <div class="summary-content" id="summary-content" style="display:none"></div>
           </div>
         </div>
       </div>
@@ -601,53 +739,56 @@
 
   <!-- Main app area -->
   <div class="app">
-    <!-- Cột trái: avatar -->
-    <div class="left">
-      <div class="label">Live Avatar</div>
-      <div class="card" id="card">
-        <div class="badge" id="badge"><span class="dot"></span><span id="badge-text">Offline</span></div>
-        <img id="avatar" src="" alt="" />
-        <div class="placeholder" id="placeholder">
-          <div class="spinner" id="spinner" style="display:none"></div>
-          <p id="ph-text">Nhấn Start để bắt đầu</p>
-          <p class="ph-hint" id="ph-hint">Xem video bài giảng bên trên trước khi hỏi</p>
+    <div class="label">Live Avatar</div>
+
+    <!-- Card + Chat cùng hàng, cùng chiều cao -->
+    <div class="app-main-row">
+      <div class="app-main-left">
+        <div class="card" id="card">
+          <div class="badge" id="badge"><span class="dot"></span><span id="badge-text">Offline</span></div>
+          <img id="avatar" src="" alt="" />
+          <div class="placeholder" id="placeholder">
+            <div class="spinner" id="spinner" style="display:none"></div>
+            <p id="ph-text">Nhấn Start để bắt đầu</p>
+            <p class="ph-hint" id="ph-hint">Xem video bài giảng bên trên trước khi hỏi</p>
+          </div>
         </div>
       </div>
 
-      <div class="controls">
-        <button id="btn-start" onclick="startSession()">▶ Start</button>
-        <button id="btn-stop"  onclick="stopSession()" disabled>⏹ Stop</button>
-
-        <!-- Toggle lecture panel -->
-        <button id="btn-toggle-lecture" onclick="toggleLecturePanel()" title="Xem/ẩn video bài giảng">📽 Bài giảng</button>
-
-        <!-- Language toggle -->
-        <button id="btn-lang" onclick="toggleLang()" disabled title="Chuyển ngôn ngữ STT">🇬🇧 EN</button>
-
-        <!-- Mic button + volume bar -->
-        <div class="mic-wrap">
-          <button id="btn-mic" onclick="toggleMic()" disabled title="Bật/tắt microphone">🎤</button>
-          <div class="vol-bar" id="vol-bar"><div class="vol-fill" id="vol-fill"></div></div>
+      <!-- Cột phải: chat -->
+      <div class="right">
+        <div class="chat-header">Lịch sử chat</div>
+        <div id="chat-log">
+          <div class="chat-empty" id="chat-empty">Chưa có tin nhắn nào</div>
         </div>
-      </div>
-
-      <div class="meta">
-        <h1>Anam Avatar</h1>
-        <p>Powered by Anam AI — Real-time streaming</p>
+        <div class="chat-input-row">
+          <input id="msg-input" type="text" placeholder="Nhập tin nhắn..." disabled
+                 onkeydown="if(event.key==='Enter') sendMessage()" />
+          <button id="btn-send" onclick="sendMessage()" disabled>➤</button>
+        </div>
       </div>
     </div>
 
-    <!-- Cột phải: chat -->
-    <div class="right">
-      <div class="chat-header">Lịch sử chat</div>
-      <div id="chat-log">
-        <div class="chat-empty" id="chat-empty">Chưa có tin nhắn nào</div>
+    <div class="controls">
+      <button id="btn-start" onclick="startSession()">▶ Start</button>
+      <button id="btn-stop"  onclick="stopSession()" disabled>⏹ Stop</button>
+
+      <!-- Toggle lecture panel -->
+      <button id="btn-toggle-lecture" onclick="toggleLecturePanel()" title="Xem/ẩn video bài giảng">📽 Bài giảng</button>
+
+      <!-- Language toggle -->
+      <button id="btn-lang" onclick="toggleLang()" disabled title="Chuyển ngôn ngữ STT">🇬🇧 EN</button>
+
+      <!-- Mic button + volume bar -->
+      <div class="mic-wrap">
+        <button id="btn-mic" onclick="toggleMic()" disabled title="Bật/tắt microphone">🎤</button>
+        <div class="vol-bar" id="vol-bar"><div class="vol-fill" id="vol-fill"></div></div>
       </div>
-      <div class="chat-input-row">
-        <input id="msg-input" type="text" placeholder="Nhập tin nhắn..." disabled
-               onkeydown="if(event.key==='Enter') sendMessage()" />
-        <button id="btn-send" onclick="sendMessage()" disabled>➤</button>
-      </div>
+    </div>
+
+    <div class="meta">
+      <h1>Anam Avatar</h1>
+      <p>Powered by Anam AI — Real-time streaming</p>
     </div>
   </div>
 
@@ -747,6 +888,8 @@
         video_url: video.video_url,
         subtitle_url: video.subtitle_url || null,
         isLocal: video.source === 'local',
+        item_id: video.item_id || null,
+        video_id: video.id || null,
       };
       // Reset subtitle state
       subtitlesCues = [];
@@ -762,6 +905,14 @@
       if (currentActiveNvItem) currentActiveNvItem.classList.remove('active');
       itemEl.classList.add('active');
       currentActiveNvItem = itemEl;
+      // Reset summary khi switch video
+      const sumEmpty = document.getElementById('summary-empty');
+      const sumContent = document.getElementById('summary-content');
+      const sumLoading = document.getElementById('summary-loading');
+      if (sumEmpty) sumEmpty.style.display = 'flex';
+      if (sumContent) sumContent.style.display = 'none';
+      if (sumLoading) sumLoading.style.display = 'none';
+      document.querySelector('.summary-empty-text').textContent = 'Chọn video rồi bấm nút bên dưới để tóm tắt';
       // Mo rong panel neu dang thu nho
       if (!lecturePanelOpen) {
         lecturePanelOpen = true;
@@ -1235,35 +1386,56 @@
         let srtText = null;
         let source = '';
 
-        // Ưu tiên 1: HeyGen video có subtitle_url → fetch + dịch EN→VI
+        // Ưu tiên 1: Local video với item_id → cache hoặc Whisper
+        if (!srtText && currentVideoInfo.item_id) {
+          btn.textContent = '⏳ Đang xử lý phụ đề...';
+          subViEl.textContent = 'Đang tải phụ đề (từ cache hoặc Whisper)...';
+          subEnEl.textContent = 'Loading subtitles (from cache or Whisper)...';
+          const resp = await fetch(`${BASE}/api/subtitles/load`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ item_id: currentVideoInfo.item_id }),
+          });
+          const data = await resp.json();
+          if (data.ok) {
+            srtText = data.srt;
+            source = data.source || 'local';
+          }
+        }
+
+        // Ưu tiên 2: HeyGen video có subtitle_url → fetch + dịch EN→VI
         if (!srtText && currentVideoInfo.subtitle_url) {
           btn.textContent = '⏳ Đang dịch EN→VI...';
           subViEl.textContent = 'Đang tải và dịch phụ đề từ HeyGen...';
           subEnEl.textContent = 'Downloading & translating subtitles...';
+          const reqBody = { subtitle_url: currentVideoInfo.subtitle_url };
+          if (currentVideoInfo.video_id) reqBody.video_id = currentVideoInfo.video_id;
           const resp = await fetch(`${BASE}/api/subtitles/load`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subtitle_url: currentVideoInfo.subtitle_url }),
+            body: JSON.stringify(reqBody),
           });
           const data = await resp.json();
           if (data.ok) {
             srtText = data.srt;
-            source = 'heygen';
+            source = data.source || 'heygen';
           }
         }
 
-        // Ưu tiên 2: Whisper transcribe (chậm)
+        // Ưu tiên 3: Whisper transcribe (chậm)
         if (!srtText && currentVideoInfo.video_url) {
           btn.textContent = '⏳ Whisper đang xử lý...';
+          const reqBody = { video_url: currentVideoInfo.video_url };
+          if (currentVideoInfo.video_id) reqBody.video_id = currentVideoInfo.video_id;
           const resp = await fetch(`${BASE}/api/subtitles/load`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ video_url: currentVideoInfo.video_url }),
+            body: JSON.stringify(reqBody),
           });
           const data = await resp.json();
           if (data.ok) {
             srtText = data.srt;
-            source = 'whisper';
+            source = data.source || 'whisper';
           } else {
             throw new Error(data.error || 'Whisper failed');
           }
@@ -1351,6 +1523,120 @@
       currentCueIdx = -1;
       updateSubtitle(lectureVid.currentTime);
     });
+    // ── Side panel tab switching ─────────────────────────────────
+    function switchSideTab(tabName) {
+      // Toggle tab buttons
+      document.querySelectorAll('.side-panel-tab').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`tab-btn-${tabName}`).classList.add('active');
+      // Toggle tab content
+      document.querySelectorAll('.side-tab-content').forEach(el => el.classList.remove('active'));
+      document.getElementById(`tab-content-${tabName}`).classList.add('active');
+    }
+
+    // ── Simple markdown → HTML renderer ─────────────────────────
+    function renderMarkdown(md) {
+      let html = md
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>\n?)+/g, match => `<ul>${match}</ul>`)
+        .replace(/\n{2,}/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+      if (!html.startsWith('<')) html = '<p>' + html;
+      if (!html.endsWith('>')) html += '</p>';
+      return html;
+    }
+
+    // ── Load summary ────────────────────────────────────────────
+    let summaryCache = {};
+    let summaryLang = 'vi';
+
+    function toggleSummaryLang(lang) {
+      summaryLang = lang;
+      // Update button UI
+      document.getElementById('btn-sum-vi').classList.toggle('active', lang === 'vi');
+      document.getElementById('btn-sum-en').classList.toggle('active', lang === 'en');
+
+      // If we already have a summary loaded, re-load in new language
+      const contentEl = document.getElementById('summary-content');
+      if (contentEl.style.display !== 'none') {
+        loadSummary();
+      }
+    }
+
+    async function loadSummary() {
+      // Cần item_id (local) hoặc video_id (HeyGen)
+      if (!currentVideoInfo.item_id && !currentVideoInfo.video_id) {
+        toast('⚠️ Chọn một video trước khi tóm tắt');
+        return;
+      }
+
+      const itemId = currentVideoInfo.item_id;
+      const videoId = currentVideoInfo.video_id;
+      const cacheKey = (itemId || videoId) + '_' + summaryLang;
+
+      // Check in-memory cache
+      if (summaryCache[cacheKey]) {
+        showSummary(summaryCache[cacheKey]);
+        return;
+      }
+
+      // Show loading
+      const emptyEl = document.getElementById('summary-empty');
+      const loadingEl = document.getElementById('summary-loading');
+      const contentEl = document.getElementById('summary-content');
+      emptyEl.style.display = 'none';
+      loadingEl.style.display = 'flex';
+      contentEl.style.display = 'none';
+
+      // Auto-switch to summary tab
+      switchSideTab('summary');
+
+      try {
+        const reqBody = { lang: summaryLang };
+        if (itemId) reqBody.item_id = itemId;
+        if (videoId) reqBody.video_id = videoId;
+
+        const resp = await fetch(`${BASE}/api/summarize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(reqBody),
+        });
+        const data = await resp.json();
+
+        if (data.ok) {
+          summaryCache[cacheKey] = data.summary;
+          showSummary(data.summary);
+          const src = data.source === 'cache' ? '(cached)' : '(Groq AI)';
+          const langLabel = summaryLang === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN';
+          toast(`✅ Đã tóm tắt ${langLabel} ${src}`);
+        } else {
+          loadingEl.style.display = 'none';
+          emptyEl.style.display = 'flex';
+          const errText = data.error || 'Lỗi không xác định';
+          document.querySelector('.summary-empty-text').textContent = `❌ ${errText}`;
+          toast(`❌ ${errText}`);
+        }
+      } catch (e) {
+        console.error('[SUM] Error:', e);
+        loadingEl.style.display = 'none';
+        emptyEl.style.display = 'flex';
+        document.querySelector('.summary-empty-text').textContent = '❌ Lỗi kết nối server';
+        toast('❌ Lỗi kết nối');
+      }
+    }
+
+    function showSummary(markdownText) {
+      const loadingEl = document.getElementById('summary-loading');
+      const contentEl = document.getElementById('summary-content');
+      const emptyEl = document.getElementById('summary-empty');
+      loadingEl.style.display = 'none';
+      emptyEl.style.display = 'none';
+      contentEl.style.display = 'block';
+      contentEl.innerHTML = renderMarkdown(markdownText);
+    }
 
   </script>
 </body>
