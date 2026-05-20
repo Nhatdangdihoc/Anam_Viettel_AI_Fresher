@@ -434,6 +434,49 @@
     .vol-bar.visible { opacity: 1; }
     .vol-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width 0.05s linear; }
 
+    /* Push-to-Talk */
+
+    #btn-mic.ptt-active {
+
+      background: rgba(74,222,128,0.18); border-color: #22c55e;
+
+      color: #16a34a; box-shadow: 0 0 20px rgba(74,222,128,0.4);
+
+      animation: pttPulse 0.8s ease-in-out infinite;
+
+    }
+
+    @keyframes pttPulse {
+
+      0%,100% { box-shadow: 0 0 12px rgba(74,222,128,0.3); transform: scale(1); }
+
+      50%      { box-shadow: 0 0 28px rgba(74,222,128,0.6); transform: scale(1.05); }
+
+    }
+
+    .ptt-hint {
+
+      font-family: 'Roboto', sans-serif; font-size: 9px; font-weight: 500;
+
+      color: var(--muted2); letter-spacing: 0.03em; white-space: nowrap;
+
+      transition: color 0.2s;
+
+    }
+
+    .ptt-hint.active { color: #16a34a; font-weight: 700; }
+
+    .ptt-hint kbd {
+
+      font-family: 'Roboto', sans-serif; font-size: 8px; font-weight: 700;
+
+      padding: 1px 4px; border-radius: 3px; border: 1px solid var(--border2);
+
+      background: var(--surface2); color: var(--text);
+
+    }
+
+
     .meta { text-align: left; }
     .meta h1 { font-family: 'Roboto', sans-serif; font-size: 17px; font-weight: 900; letter-spacing: -0.01em; }
     .meta p  { font-size: 11px; color: var(--muted); margin-top: 3px; font-weight: 400; }
@@ -648,14 +691,15 @@
       <button id="btn-stop"  onclick="stopSession()" disabled>⏹ Stop</button>
       <button id="btn-toggle-lecture" onclick="toggleLecturePanel()" title="Xem/ẩn video bài giảng">📽 Bài giảng</button>
 
-      <!-- Language toggle — always clickable, reflects selected lang for NEXT/CURRENT session -->
-      <button id="btn-lang" class="en" onclick="toggleLang()" title="Chuyển ngôn ngữ Avatar">🇬🇧 EN</button>
+      <!-- Language toggle -->
+      <button id="btn-lang" onclick="toggleLang()" disabled title="Chuyển ngôn ngữ STT">🇬🇧 EN</button>
 
       <!-- Mic button + volume bar -->
       <div class="mic-wrap">
-        <button id="btn-mic" onclick="toggleMic()" disabled title="Bật/tắt microphone">🎤</button>
+        <button id="btn-mic" onclick="toggleMic()" title="Bật/tắt microphone">🎤</button>
         <div class="vol-bar" id="vol-bar"><div class="vol-fill" id="vol-fill"></div></div>
       </div>
+      <span class="ptt-hint" id="ptt-hint">giữ <kbd>Space</kbd> để nói</span>
     </div>
 
     <div class="meta">
@@ -946,12 +990,15 @@
     `;
 
     async function startMic() {
+      console.log('%c[MIC] startMic() — xin quyền micro...', 'color:#22c55e;font-weight:bold');
       micStream = await navigator.mediaDevices.getUserMedia({ audio: {
         sampleRate: MIC_SAMPLE_RATE, channelCount: MIC_CHANNELS,
         echoCancellation: true, noiseSuppression: true, autoGainControl: true,
       }});
+      console.log('[MIC] getUserMedia OK — tracks:', micStream.getAudioTracks().map(t => t.label));
 
       micCtx = new AudioContext({ sampleRate: MIC_SAMPLE_RATE });
+      console.log(`[MIC] AudioContext: ${micCtx.sampleRate}Hz, state=${micCtx.state}`);
       const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
       const wUrl = URL.createObjectURL(blob);
       await micCtx.audioWorklet.addModule(wUrl);
@@ -961,9 +1008,10 @@
       // Backend /mic sẽ tự xử lý STT theo language_code đã set khi /start
       const wsUrl = `ws://localhost:8000/mic?sample_rate=${MIC_SAMPLE_RATE}&channels=${MIC_CHANNELS}&lang=${langMode}`;
 
+      console.log(`[MIC] Kết nối WS: ${wsUrl}`);
       micWs = new WebSocket(wsUrl);
       micWs.binaryType = 'arraybuffer';
-      micWs.onopen  = () => console.log(`[MIC] WS open (lang=${langMode})`);
+      micWs.onopen  = () => console.log(`[MIC] WS open (${langMode})`);
       micWs.onerror = (e) => { console.error('Mic WS error', e); stopMic(); };
       micWs.onclose = () => { if (micActive) stopMic(); };
 
@@ -982,8 +1030,16 @@
       source.connect(analyser);
       source.connect(micNode);
 
+      let chunkCount = 0;
       micNode.port.onmessage = (e) => {
-        if (micWs && micWs.readyState === 1) micWs.send(e.data);
+        if (micWs && micWs.readyState === 1) {
+          micWs.send(e.data);
+          chunkCount++;
+          if (chunkCount % 5 === 1) // Log mỗi 5 chunk để không spam
+            console.log(`[MIC] Chunk #${chunkCount} gửi: ${e.data.byteLength} bytes | WS state=${micWs.readyState}`);
+        } else {
+          console.warn(`[MIC] Chunk bỏ qua — WS readyState=${micWs?.readyState}`);
+        }
       };
 
       function drawVolume() {
@@ -999,10 +1055,13 @@
       btnMic.classList.add('active');
       btnMic.title = 'Tắt microphone';
       volBar.classList.add('visible');
+      console.log('%c[MIC] Đang ghi âm — nói gì đi!', 'color:#22c55e;font-weight:bold;font-size:13px');
     }
 
     function stopMic() {
+      console.log('%c[MIC] stopMic() — dừng ghi âm', 'color:#f87171;font-weight:bold');
       micActive = false;
+      if (langMode === 'vi' && micWs && micWs.readyState === 1) micWs.send('flush');
       if (micNode)   { micNode.disconnect(); micNode = null; }
       if (micCtx)    { micCtx.close(); micCtx = null; }
       if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
@@ -1020,6 +1079,51 @@
         catch (err) { console.error(err); toast('❌ Không thể truy cập micro: ' + err.message); }
       }
     }
+
+    // ── Push-to-Talk (giữ Space để nói) ───────────────────────
+    let pttHeld = false;
+    const pttHint = document.getElementById('ptt-hint');
+
+    document.addEventListener('keydown', async (e) => {
+      if (e.code !== 'Space' || pttHeld || micActive) return;
+      const tag = document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement.isContentEditable) return;
+
+      e.preventDefault();
+      pttHeld = true;
+      console.log('%c[PTT] Space GIỮ — bắt đầu ghi âm', 'color:#fbbf24;font-weight:bold');
+
+      try {
+        await startMic();
+        btnMic.classList.add('ptt-active');
+        if (pttHint) { pttHint.textContent = '🔴 Đang nghe... (thả Space để gửi)'; pttHint.classList.add('active'); }
+      } catch (err) {
+        pttHeld = false;
+        console.error('[PTT] Lỗi bật mic:', err);
+        toast('❌ Không thể bật mic: ' + err.message);
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.code !== 'Space' || !pttHeld) return;
+      e.preventDefault();
+      pttHeld = false;
+
+      // Flush buffer → Whisper xử lý phần âm thanh còn lại
+      if (micWs && micWs.readyState === 1) micWs.send('flush');
+
+      // Reset UI
+      btnMic.classList.remove('ptt-active');
+      if (pttHint) { pttHint.textContent = 'giữ <kbd>Space</kbd> để nói'; pttHint.innerHTML = 'giữ <kbd>Space</kbd> để nói'; pttHint.classList.remove('active'); }
+
+      // Dừng mic sau delay ngắn để flush kịp xử lý
+      setTimeout(() => {
+        if (!pttHeld) { // kiểm tra lại phòng trường hợp nhấn lại luôn
+          stopMic();
+          toast('✅ Đã gửi âm thanh — đang xử lý...');
+        }
+      }, 350);
+    });
 
     // ── Chat UI ───────────────────────────────────────────────
     const bubbles = {}, streamContent = {};
@@ -1131,6 +1235,7 @@
         btnSend.disabled  = true;
         btnStop.disabled  = true;
         btnMic.disabled   = true;
+        btnLang.disabled  = true;
         btnStart.disabled = false;
         updateLangBtn(); // show unlocked state
         stopMic();
@@ -1361,11 +1466,16 @@
     let summaryLang = 'vi';
 
     function toggleSummaryLang(lang) {
+      if (summaryLang === lang) return; // Không làm gì nếu cùng ngôn ngữ
       summaryLang = lang;
       document.getElementById('btn-sum-vi').classList.toggle('active', lang === 'vi');
       document.getElementById('btn-sum-en').classList.toggle('active', lang === 'en');
+
+      // If we already have a summary loaded, re-load in new language
       const contentEl = document.getElementById('summary-content');
-      if (contentEl.style.display !== 'none') loadSummary();
+      if (contentEl.style.display !== 'none') {
+        loadSummary();
+      }
     }
 
     async function loadSummary() {

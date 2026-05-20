@@ -484,7 +484,12 @@ async def _call_groq_summarize(cleaned: str, label: str, summary_cache: Path, la
     if not GROQ_API_KEY:
         return JSONResponse(status_code=500, content={"ok": False, "error": "Chưa cấu hình GROQ_API_KEY"})
     if lang == "en":
-        system_prompt = "You are a professional lecture summarizer. Summarize in English with markdown: ## headings, bullets, bold key terms. ~300-500 words."
+        system_prompt = (
+            "You are a professional lecture summarizer. "
+            "Summarize the lecture content in English with clear structure and main topics. "
+            "Use markdown format: ## headings, bullet points, and bold for key terms. "
+            "Keep it concise yet comprehensive, around 300-500 words."
+        )
         user_prompt = f"Please summarize the following lecture:\n\n{cleaned[:6000]}"
     else:
         system_prompt = "Bạn là trợ lý tóm tắt bài giảng. Tóm tắt bằng tiếng Việt, markdown: ## tiêu đề, bullet, bold từ khóa. ~300-500 từ."
@@ -511,6 +516,11 @@ async def _call_groq_summarize(cleaned: str, label: str, summary_cache: Path, la
 
 @app.post("/api/summarize")
 async def summarize_lecture(body: dict):
+    """
+    Tóm tắt bài giảng từ script/SRT.
+    Hỗ trợ cả local video (item_id) và HeyGen video (video_id).
+    Sử dụng Groq API (llama-3.3-70b-versatile) hoặc cache nếu có.
+    """
     item_id = body.get("item_id")
     video_id = body.get("video_id")
     lang = body.get("lang", "vi")
@@ -522,10 +532,22 @@ async def summarize_lecture(body: dict):
     if item_id:
         item_dir = VIDEO_ITEMS_DIR / item_id
         if not item_dir.exists():
-            return JSONResponse(status_code=404, content={"ok": False, "error": "Video item không tồn tại"})
+            return JSONResponse(
+                status_code=404,
+                content={"ok": False, "error": "Video item không tồn tại"}
+            )
+
+        # Check cache (theo ngôn ngữ)
         summary_cache = item_dir / f"summary_{lang}.txt"
         if summary_cache.exists():
-            return JSONResponse(content={"ok": True, "summary": summary_cache.read_text(encoding="utf-8"), "source": "cache"})
+            print(f"[SUM] Cache hit for {item_id} ({lang})")
+            return JSONResponse(content={
+                "ok": True,
+                "summary": summary_cache.read_text(encoding="utf-8"),
+                "source": "cache",
+            })
+
+        # Read script
         script_dir = item_dir / "script"
         script_text = None
         if script_dir.exists():
@@ -544,8 +566,17 @@ async def summarize_lecture(body: dict):
     if video_id:
         os.makedirs(str(SUMMARY_CACHE_DIR), exist_ok=True)
         summary_cache = SUMMARY_CACHE_DIR / f"{video_id}_{lang}.txt"
+
+        # Check cache
         if summary_cache.exists():
-            return JSONResponse(content={"ok": True, "summary": summary_cache.read_text(encoding="utf-8"), "source": "cache"})
+            print(f"[SUM] HeyGen cache hit for {video_id} ({lang})")
+            return JSONResponse(content={
+                "ok": True,
+                "summary": summary_cache.read_text(encoding="utf-8"),
+                "source": "cache",
+            })
+
+        # Read from cached SRT
         srt_cache = SRT_CACHE_DIR / f"{video_id}_vi_en.srt"
         if not srt_cache.exists():
             return JSONResponse(status_code=404, content={"ok": False, "error": "Chưa có phụ đề. Hãy tải phụ đề trước."})
@@ -563,6 +594,38 @@ async def mic_ws(websocket: WebSocket):
     Anam tự xử lý STT cho cả EN và VI (theo language_code đã set khi /start).
     """
     await websocket.accept()
+    # /mic relay PCM thang vao Anam neu connected, neu khong thi bo qua (khong close WS)
+
+    sample_rate  = int(websocket.query_params.get("sample_rate", 16000))
+    num_channels = int(websocket.query_params.get("channels", 1))
+
+    print(f"[MIC] Mic client ket noi: {sample_rate}Hz, {num_channels}ch")
+    try:
+        while True:
+            pcm_bytes = await websocket.receive_bytes()
+            if current_session and is_connected:
+                current_session.send_user_audio(
+                    audio_bytes=pcm_bytes,
+                    sample_rate=sample_rate,
+                    num_channels=num_channels,
+                )
+            # Neu chua ket noi Anam: nhan bytes nhung khong relay (giu WS alive)
+    except WebSocketDisconnect:
+        print("[MIC] Mic client ngat ket noi")
+    except Exception as e:
+        print(f"[ERR] Loi mic_ws: {e}")
+
+
+# ─── Vietnamese STT endpoint ─────────────────────────────────────────────────
+
+@app.websocket("/stt")
+async def stt_ws(websocket: WebSocket):
+    """
+    Nhận raw 16-bit PCM mono 16kHz từ frontend,
+    gom đủ chunk rồi dùng Whisper nhận dạng tiếng Việt,
+    sau đó gửi kết quả text vào Anam qua send_message().
+    """
+    await websocket.accept()
 
     if not current_session or not is_connected:
         await websocket.send_text('{"error":"Chưa kết nối Anam"}')
@@ -570,24 +633,72 @@ async def mic_ws(websocket: WebSocket):
         return
 
     sample_rate = int(websocket.query_params.get("sample_rate", 16000))
-    num_channels = int(websocket.query_params.get("channels", 1))
+    lang = websocket.query_params.get("lang", "vi")
+    chunk_ms = int(websocket.query_params.get("chunk_ms", 1500))
 
-    print(f"[MIC] Mic client ket noi: {sample_rate}Hz, {num_channels}ch")
+    bytes_needed = int(sample_rate * (chunk_ms / 1000) * 2)
+
+    print(f"[STT-VI] STT client ket noi: {sample_rate}Hz, lang={lang}, chunk_ms={chunk_ms}")
+    pcm_buffer = bytearray()
+
+    def run_whisper(pcm_bytes: bytes) -> str:
+        """Chạy Whisper trong thread pool để không block event loop."""
+        audio_np = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        result = whisper_model.transcribe(audio_np, language=lang, fp16=False)
+        return result["text"].strip()
+
     try:
         while True:
-            pcm_bytes = await websocket.receive_bytes()
-            current_session.send_user_audio(
-                audio_bytes=pcm_bytes,
-                sample_rate=sample_rate,
-                num_channels=num_channels,
-            )
+            data = await websocket.receive()
+
+            if "bytes" in data and data["bytes"]:
+                pcm_buffer.extend(data["bytes"])
+
+                while len(pcm_buffer) >= bytes_needed:
+                    chunk = bytes(pcm_buffer[:bytes_needed])
+                    del pcm_buffer[:bytes_needed]
+
+                    loop = asyncio.get_event_loop()
+                    text = await loop.run_in_executor(_thread_pool, run_whisper, chunk)
+
+                    if text and current_session:
+                        print(f"[STT] Nhan dang: '{text}'")
+                        await broadcast_chat({
+                            "type": "stream",
+                            "id": f"stt::{text[:20]}",
+                            "role": "user",
+                            "content": text,
+                            "content_index": 0,
+                            "end_of_speech": True,
+                            "interrupted": False,
+                        })
+                        await current_session.send_message(text)
+
+            elif "text" in data:
+                cmd = (data["text"] or "").strip().lower()
+                if cmd == "flush" and pcm_buffer and current_session:
+                    chunk = bytes(pcm_buffer)
+                    pcm_buffer.clear()
+                    loop = asyncio.get_event_loop()
+                    text = await loop.run_in_executor(_thread_pool, run_whisper, chunk)
+                    if text:
+                        print(f"[STT-FLUSH] Nhan dang: '{text}'")
+                        await broadcast_chat({
+                            "type": "stream",
+                            "id": f"stt::{text[:20]}",
+                            "role": "user",
+                            "content": text,
+                            "content_index": 0,
+                            "end_of_speech": True,
+                            "interrupted": False,
+                        })
+                        await current_session.send_message(text)
+
     except WebSocketDisconnect:
-        print("[MIC] Mic client ngat ket noi")
+        print("[STT-VI] STT client ngat ket noi")
     except Exception as e:
-        print(f"[ERR] Loi mic_ws: {e}")
+        print(f"[ERR] Loi stt_ws: {e}")
 
-
-# ─── AgentAudio (giữ lại nếu cần dùng sau) ───────────────────────────────────
 
 @app.websocket("/agent-audio")
 async def agent_audio_ws(websocket: WebSocket):
