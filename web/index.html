@@ -1554,14 +1554,19 @@
     let summaryLang = 'vi';
 
     function toggleSummaryLang(lang) {
+      if (summaryLang === lang) return; // Không làm gì nếu cùng ngôn ngữ
       summaryLang = lang;
       // Update button UI
       document.getElementById('btn-sum-vi').classList.toggle('active', lang === 'vi');
       document.getElementById('btn-sum-en').classList.toggle('active', lang === 'en');
 
-      // If we already have a summary loaded, re-load in new language
+      // Re-load summary nếu đã bắt đầu load (emptyEl bị ẩn = đang loading hoặc đang hiển thị)
+      const emptyEl = document.getElementById('summary-empty');
       const contentEl = document.getElementById('summary-content');
-      if (contentEl.style.display !== 'none') {
+      const isLoadingOrDone = emptyEl.style.display === 'none';
+      const hasSummaryVisible = contentEl.style.display !== 'none';
+
+      if (isLoadingOrDone || hasSummaryVisible) {
         loadSummary();
       }
     }

@@ -641,11 +641,18 @@ async def _call_groq_summarize(cleaned: str, label: str, summary_cache: Path, la
     if lang == "en":
         system_prompt = (
             "You are a professional lecture summarizer. "
-            "Summarize the lecture content in English with clear structure and main topics. "
-            "Use markdown format: ## headings, bullet points, and bold for key terms. "
+            "IMPORTANT: You MUST write your entire response in English, regardless of the language of the input content. "
+            "Even if the lecture content is in Vietnamese or another language, your summary MUST be in English. "
+            "Summarize the lecture content with clear structure and main topics. "
+            "Use markdown format: ## headings, bullet points, and **bold** for key terms. "
             "Keep it concise yet comprehensive, around 300-500 words."
         )
-        user_prompt = f"Please summarize the following lecture:\n\n{cleaned[:6000]}"
+        user_prompt = (
+            f"Please summarize the following lecture content in English.\n"
+            f"Note: The content may be in Vietnamese — you MUST still write your summary entirely in English.\n\n"
+            f"{cleaned[:6000]}\n\n"
+            f"Remember: Write the summary in English only."
+        )
     else:
         system_prompt = (
             "Bạn là trợ lý tóm tắt bài giảng chuyên nghiệp. "
@@ -710,7 +717,7 @@ async def summarize_lecture(body: dict):
     """
     Tóm tắt bài giảng từ script/SRT.
     Hỗ trợ cả local video (item_id) và HeyGen video (video_id).
-    Sử dụng Groq API (llama-3.3-70b-versatile) hoặc cache nếu có.
+    Luôn gọi Groq API để tạo tóm tắt mới (không đọc cache cũ).
     """
     item_id = body.get("item_id")
     video_id = body.get("video_id")
@@ -735,15 +742,8 @@ async def summarize_lecture(body: dict):
                 content={"ok": False, "error": "Video item không tồn tại"}
             )
 
-        # Check cache (theo ngôn ngữ)
+        # Đường dẫn cache (chỉ dùng để ghi kết quả mới, không đọc cache cũ)
         summary_cache = item_dir / f"summary_{lang}.txt"
-        if summary_cache.exists():
-            print(f"[SUM] Cache hit for {item_id} ({lang})")
-            return JSONResponse(content={
-                "ok": True,
-                "summary": summary_cache.read_text(encoding="utf-8"),
-                "source": "cache",
-            })
 
         # Read script
         script_dir = item_dir / "script"
@@ -774,14 +774,7 @@ async def summarize_lecture(body: dict):
         os.makedirs(str(SUMMARY_CACHE_DIR), exist_ok=True)
         summary_cache = SUMMARY_CACHE_DIR / f"{video_id}_{lang}.txt"
 
-        # Check cache
-        if summary_cache.exists():
-            print(f"[SUM] HeyGen cache hit for {video_id} ({lang})")
-            return JSONResponse(content={
-                "ok": True,
-                "summary": summary_cache.read_text(encoding="utf-8"),
-                "source": "cache",
-            })
+        # Cache path (chỉ dùng để ghi kết quả mới, không đọc cache cũ)
 
         # Read from cached SRT
         srt_cache = SRT_CACHE_DIR / f"{video_id}_vi_en.srt"
