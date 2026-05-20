@@ -800,24 +800,22 @@ async def mic_ws(websocket: WebSocket):
     Server relay thẳng vào session.send_user_audio().
     """
     await websocket.accept()
+    # /mic relay PCM thang vao Anam neu connected, neu khong thi bo qua (khong close WS)
 
-    if not current_session or not is_connected:
-        await websocket.send_text('{"error":"Chưa kết nối Anam"}')
-        await websocket.close()
-        return
-
-    sample_rate = int(websocket.query_params.get("sample_rate", 16000))
+    sample_rate  = int(websocket.query_params.get("sample_rate", 16000))
     num_channels = int(websocket.query_params.get("channels", 1))
 
     print(f"[MIC] Mic client ket noi: {sample_rate}Hz, {num_channels}ch")
     try:
         while True:
             pcm_bytes = await websocket.receive_bytes()
-            current_session.send_user_audio(
-                audio_bytes=pcm_bytes,
-                sample_rate=sample_rate,
-                num_channels=num_channels,
-            )
+            if current_session and is_connected:
+                current_session.send_user_audio(
+                    audio_bytes=pcm_bytes,
+                    sample_rate=sample_rate,
+                    num_channels=num_channels,
+                )
+            # Neu chua ket noi Anam: nhan bytes nhung khong relay (giu WS alive)
     except WebSocketDisconnect:
         print("[MIC] Mic client ngat ket noi")
     except Exception as e:
@@ -834,11 +832,8 @@ async def stt_ws(websocket: WebSocket):
     sau đó gửi kết quả text vào Anam qua send_message().
     """
     await websocket.accept()
-
-    if not current_session or not is_connected:
-        await websocket.send_text('{"error":"Chưa kết nối Anam"}')
-        await websocket.close()
-        return
+    # STT hoạt động độc lập với Anam — transcribe bất kể avatar có connected hay không
+    # Chỉ gửi vào Anam nếu đang live
 
     sample_rate = int(websocket.query_params.get("sample_rate", 16000))
     lang = websocket.query_params.get("lang", "vi")
@@ -869,7 +864,7 @@ async def stt_ws(websocket: WebSocket):
                     loop = asyncio.get_event_loop()
                     text = await loop.run_in_executor(_thread_pool, run_whisper, chunk)
 
-                    if text and current_session:
+                    if text:
                         print(f"[STT] Nhan dang: '{text}'")
                         await broadcast_chat({
                             "type": "stream",
@@ -880,11 +875,13 @@ async def stt_ws(websocket: WebSocket):
                             "end_of_speech": True,
                             "interrupted": False,
                         })
-                        await current_session.send_message(text)
+                        # Chi gui vao Anam neu dang ket noi
+                        if current_session and is_connected:
+                            await current_session.send_message(text)
 
             elif "text" in data:
                 cmd = (data["text"] or "").strip().lower()
-                if cmd == "flush" and pcm_buffer and current_session:
+                if cmd == "flush" and pcm_buffer:
                     chunk = bytes(pcm_buffer)
                     pcm_buffer.clear()
                     loop = asyncio.get_event_loop()
@@ -900,7 +897,8 @@ async def stt_ws(websocket: WebSocket):
                             "end_of_speech": True,
                             "interrupted": False,
                         })
-                        await current_session.send_message(text)
+                        if current_session and is_connected:
+                            await current_session.send_message(text)
 
     except WebSocketDisconnect:
         print("[STT-VI] STT client ngat ket noi")
