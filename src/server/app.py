@@ -600,18 +600,28 @@ async def mic_ws(websocket: WebSocket):
     num_channels = int(websocket.query_params.get("channels", 1))
 
     print(f"[MIC] Mic client ket noi: {sample_rate}Hz, {num_channels}ch")
+    chunk_count = 0
     try:
         while True:
             pcm_bytes = await websocket.receive_bytes()
+            chunk_count += 1
             if current_session and is_connected:
-                current_session.send_user_audio(
-                    audio_bytes=pcm_bytes,
-                    sample_rate=sample_rate,
-                    num_channels=num_channels,
-                )
-            # Neu chua ket noi Anam: nhan bytes nhung khong relay (giu WS alive)
+                try:
+                    current_session.send_user_audio(
+                        audio_bytes=pcm_bytes,
+                        sample_rate=sample_rate,
+                        num_channels=num_channels,
+                    )
+                    if chunk_count % 50 == 1:
+                        print(f"[MIC] Chunk #{chunk_count}: {len(pcm_bytes)} bytes relay OK")
+                except Exception as relay_err:
+                    if chunk_count <= 3:
+                        print(f"[MIC] send_user_audio error (chunk#{chunk_count}): {relay_err}")
+            else:
+                if chunk_count <= 2:
+                    print(f"[MIC] Chunk #{chunk_count}: skip (session={bool(current_session)}, connected={is_connected})")
     except WebSocketDisconnect:
-        print("[MIC] Mic client ngat ket noi")
+        print(f"[MIC] Mic client ngat ket noi (tong {chunk_count} chunks)")
     except Exception as e:
         print(f"[ERR] Loi mic_ws: {e}")
 

@@ -33,13 +33,13 @@
     /* ── Page header ──────────────────────────────────────────── */
     .page-header {
       position: relative; z-index: 1;
-      width: 100%; max-width: 1100px;
+      width: 100%; max-width: 1280px;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 4px;
+      padding: 0;
     }
-    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 18px; }
     .brand-logo {
-      height: 52px; width: auto; flex-shrink: 0;
+      height: 74px; width: auto; flex-shrink: 0;
       display: block; object-fit: contain;
       filter: drop-shadow(0 0 6px rgba(238,0,51,0.3));
     }
@@ -57,14 +57,14 @@
     /* ── Lecture video panel ──────────────────────────────────── */
     .lecture-wrap {
       position: relative; z-index: 1;
-      width: 100%; max-width: 1100px;
+      width: 100%; max-width: 1280px;
       border-radius: 20px; overflow: hidden;
       border: 1px solid var(--border2);
       background: var(--surface);
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
       transition: max-height 0.45s cubic-bezier(0.4,0,0.2,1),
                   opacity 0.35s ease, margin-bottom 0.4s ease;
-      max-height: 600px; opacity: 1;
+      max-height: 900px; opacity: 1;
     }
     .lecture-wrap.collapsed { max-height: 52px; }
     .lecture-wrap.hidden-panel {
@@ -88,13 +88,23 @@
     .lecture-title span { color: var(--text); font-weight: 900; }
     .lecture-chevron { font-size: 12px; color: var(--muted); transition: transform 0.35s; flex-shrink: 0; }
     .lecture-wrap.collapsed .lecture-chevron { transform: rotate(-90deg); }
-    .lecture-body { padding: 0; display: flex; }
+    .lecture-body { padding: 0; display: flex; align-items: stretch; }
     .lecture-player-side { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-    .lecture-video-wrap { position: relative; width: 100%; background: #000; }
+    .lecture-video-wrap { position: relative; width: min(100%, 980px); aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
     #lecture-video {
-      display: block; width: 100%;
-      max-height: 400px; object-fit: contain; background: #000;
+      display: block; width: 100%; height: 100%;
+      object-fit: contain; object-position: center center; background: #000;
     }
+    .lecture-speaker-tab {
+      display: none; max-width: calc(100% - 36px);
+      padding: 7px 12px; border-radius: 7px;
+      background: var(--accent); color: #fff;
+      font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 900;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      box-shadow: 0 8px 20px rgba(238,0,51,0.24);
+      flex-shrink: 0;
+    }
+    .lecture-speaker-tab.visible { display: block; }
     .lecture-video-wrap::after {
       content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
       background: linear-gradient(90deg, var(--accent), var(--accent2));
@@ -167,7 +177,7 @@
     .next-videos-panel {
       width: 280px; flex-shrink: 0;
       border-left: 1px solid var(--border); background: var(--surface2);
-      display: flex; flex-direction: column; max-height: 520px; overflow: hidden;
+      display: flex; flex-direction: column; align-self: stretch; min-height: 0; overflow: hidden;
     }
     .next-videos-header {
       padding: 12px 14px; border-bottom: 1px solid var(--border);
@@ -322,8 +332,8 @@
     }
 
     /* ── Main area ────────────────────────────────────────────── */
-    .app { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 1100px; }
-    .app-main-row { display: flex; gap: 16px; width: 100%; align-items: stretch; }
+    .app { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 1280px; }
+    .app-main-row { display: flex; gap: 16px; width: 100%; align-items: flex-start; }
     .app-main-left { flex: 1; min-width: 0; display: flex; flex-direction: column; align-self: flex-start; }
     .label {
       font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: 700;
@@ -335,9 +345,10 @@
     /* Avatar card */
     .card {
       position: relative; border-radius: 20px; overflow: hidden;
-      border: 1px solid var(--border); background: var(--surface);
+      border: 1px solid var(--border); background: #050505;
       box-shadow: 0 32px 80px rgba(0,0,0,0.6);
-      width: 100%; height: 420px; min-height: 280px;
+      width: 100%; height: auto; min-height: 0;
+      max-height: none; aspect-ratio: 16 / 9;
     }
     .card::before {
       content: ''; position: absolute; inset: -1px; border-radius: 21px;
@@ -345,7 +356,21 @@
       opacity: 0; transition: opacity 0.6s; z-index: 0; pointer-events: none;
     }
     .card.live::before { opacity: 0.35; }
-    #avatar { display: block; width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 1; }
+    #avatar {
+      display: block; position: absolute; inset: 0; z-index: 1;
+      width: 100%; height: 100%; object-fit: cover;
+      object-position: center top; background: #050505;
+    }
+    #anam-widget-wrap {
+      position: absolute; inset: 0; z-index: 2;
+      width: 100%; height: 100%; display: none; overflow: hidden;
+      background: #050505; contain: layout paint;
+    }
+    #anam-widget-wrap anam-agent { display: block; width: 100%; height: 100%; }
+    .card.widget-mode { aspect-ratio: 16 / 9; }
+    .card.widget-mode #anam-widget-wrap { display: block; }
+    .card.widget-mode #avatar,
+    .card.widget-mode .placeholder { display: none; }
     .placeholder {
       position: absolute; inset: 0; z-index: 2;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
@@ -385,6 +410,16 @@
     #btn-stop:disabled { opacity: 0.3; cursor: not-allowed; }
     #btn-toggle-lecture { background: rgba(238,0,51,0.10); color: var(--accent3); border: 1px solid rgba(238,0,51,0.2); padding: 11px 14px; font-size: 13px; }
     #btn-toggle-lecture:hover { background: rgba(238,0,51,0.20); }
+    #btn-widget-mode {
+      background: rgba(0,0,0,0.04); color: var(--muted);
+      border: 1px solid var(--border); padding: 11px 14px; font-size: 12px;
+      letter-spacing: 0.03em;
+    }
+    #btn-widget-mode:hover { border-color: var(--accent); color: var(--accent); background: rgba(238,0,51,0.08); }
+    #btn-widget-mode.active {
+      background: rgba(238,0,51,0.12); border-color: rgba(238,0,51,0.35);
+      color: var(--accent3);
+    }
 
     /* Language button */
     #btn-lang {
@@ -484,9 +519,9 @@
     /* ── Right: chat panel ────────────────────────────────────── */
     .right {
       display: flex; flex-direction: column; gap: 0;
-      width: 300px; flex-shrink: 0;
+      width: 420px; flex-shrink: 0;
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 20px; overflow: hidden; align-self: stretch;
+      border-radius: 20px; overflow: hidden; align-self: flex-start;
     }
     .chat-header {
       padding: 14px 16px; border-bottom: 1px solid var(--border);
@@ -542,9 +577,11 @@
     /* ── Responsive ───────────────────────────────────────────── */
     @media (max-width: 780px) {
       .app-main-row { flex-direction: column; }
+      .app-main-left { max-width: none; width: 100%; }
       .right { width: 100%; }
       #chat-log { min-height: 180px; max-height: 240px; }
       .lecture-wrap { border-radius: 16px; }
+      .card { min-height: 0; max-height: none; }
     }
     @media (max-width: 480px) {
       body { padding: 12px 10px 24px; }
@@ -562,9 +599,6 @@
         <div class="brand-name">Viettel AI Fresher</div>
         <div class="brand-sub">Interactive Learning Platform</div>
       </div>
-    </div>
-    <div class="header-right">
-      <div class="chip">Beta</div>
     </div>
   </header>
 
@@ -587,6 +621,7 @@
           </video>
         </div>
         <div class="lecture-meta">
+          <span class="lecture-speaker-tab" id="lecture-speaker-tab">PGĐ Học Viện Viettel: DƯƠNG XUÂN PHƯỢNG</span>
           <span class="lecture-meta-tag">Viettel</span>
           <span id="lecture-meta-desc">Giai đoạn 3 · 2010–2020 · Toàn cầu hóa &amp; bứt phá</span>
           <span style="margin-left:auto; color: var(--muted); font-size:11px;">Xem trước khi hỏi Avatar ↓</span>
@@ -664,6 +699,15 @@
         <div class="card" id="card">
           <div class="badge" id="badge"><span class="dot"></span><span id="badge-text">Offline</span></div>
           <img id="avatar" src="" alt="" />
+          <div id="anam-widget-wrap">
+            <anam-agent
+              id="anam-widget"
+              agent-id="9eec4205-2840-412f-b53f-86d8c47dd539"
+              layout="inline"
+              ui-text-input="true"
+              call-to-action="Bắt đầu chế độ dự phòng"
+            ></anam-agent>
+          </div>
           <div class="placeholder" id="placeholder">
             <div class="spinner" id="spinner" style="display:none"></div>
             <p id="ph-text">Nhấn Start để bắt đầu</p>
@@ -691,8 +735,10 @@
       <button id="btn-stop"  onclick="stopSession()" disabled>⏹ Stop</button>
       <button id="btn-toggle-lecture" onclick="toggleLecturePanel()" title="Xem/ẩn video bài giảng">📽 Bài giảng</button>
 
+      <button id="btn-widget-mode" onclick="toggleWidgetMode()">Bạn gặp lỗi khi trò chuyện ư? Dùng chế độ khác</button>
+
       <!-- Language toggle -->
-      <button id="btn-lang" onclick="toggleLang()" disabled title="Chuyển ngôn ngữ STT">🇬🇧 EN</button>
+      <button id="btn-lang" onclick="toggleLang()" title="Chuyển ngôn ngữ">🇻🇳 VI</button>
 
       <!-- Mic button + volume bar -->
       <div class="mic-wrap">
@@ -726,13 +772,21 @@
     const btnStop     = document.getElementById("btn-stop");
     const btnMic      = document.getElementById("btn-mic");
     const btnLang     = document.getElementById("btn-lang");
+    const btnWidgetMode = document.getElementById("btn-widget-mode");
+    const anamWidgetWrap = document.getElementById("anam-widget-wrap");
+    const anamWidget = document.getElementById("anam-widget");
     const volBar      = document.getElementById("vol-bar");
     const volFill     = document.getElementById("vol-fill");
     const msgInput    = document.getElementById("msg-input");
     const btnSend     = document.getElementById("btn-send");
     const chatLog     = document.getElementById("chat-log");
+    const chatPanel   = document.querySelector(".right");
     const lectureWrap  = document.getElementById("lecture-wrap");
+    const lectureBody  = document.getElementById("lecture-body");
+    const lecturePlayerSide = document.querySelector(".lecture-player-side");
+    const nextVideosPanel = document.querySelector(".next-videos-panel");
     const lectureVid   = document.getElementById("lecture-video");
+    const lectureSpeakerTab = document.getElementById("lecture-speaker-tab");
     const nvList       = document.getElementById("nv-list");
     const nvState      = document.getElementById("nv-state");
     const nvCount      = document.getElementById("nv-count");
@@ -781,6 +835,20 @@
       isLocal: true,
     };
 
+    function updateLectureSpeakerTab(video) {
+      if (!lectureSpeakerTab) return;
+      const title = (video?.title || '').toLowerCase();
+      const url = (video?.video_url || '').toLowerCase();
+      const shouldShow =
+        video?.item_id === 'item2' ||
+        title.includes('gđ3') ||
+        title.includes('gd3') ||
+        url.includes('item2') ||
+        url.includes('g%c4%913') ||
+        url.includes('gd3');
+      lectureSpeakerTab.classList.toggle('visible', shouldShow);
+    }
+
     function playVideo(video, itemEl) {
       lectureVid.src = video.video_url;
       lectureVid.play().catch(() => {});
@@ -798,6 +866,7 @@
         item_id: video.item_id || null,
         video_id: video.id || null,
       };
+      updateLectureSpeakerTab(video);
       subtitlesCues = [];
       currentCueIdx = -1;
       subViEl.textContent = 'Bấm "Tải phụ đề" để hiện phụ đề...';
@@ -821,6 +890,7 @@
         lecturePanelOpen = true;
         lectureWrap.classList.remove('collapsed', 'hidden-panel');
       }
+      requestAnimationFrame(syncLecturePanelHeight);
     }
 
     function renderNvItem(video) {
@@ -924,8 +994,9 @@
 
     // ── Language mode ─────────────────────────────────────────
     // langMode = ngôn ngữ sẽ dùng cho session tiếp theo (hoặc session hiện tại nếu chưa live)
-    let langMode = 'en';
+    let langMode = 'vi';
     let sessionLive = false;
+    let widgetMode = false;
 
     function updateLangBtn() {
       if (langMode === 'vi') {
@@ -944,6 +1015,12 @@
     }
 
     function toggleLang() {
+      syncChatHeight();
+
+      if (widgetMode) {
+        toast('Widget mode tự quản lý ngôn ngữ trong Anam Lab');
+        return;
+      }
       // Nếu session đang live, chỉ thông báo — không cho đổi
       if (sessionLive) {
         toast(`⚠️ Avatar đang live — Stop session rồi đổi ngôn ngữ`);
@@ -1061,7 +1138,7 @@
     function stopMic() {
       console.log('%c[MIC] stopMic() — dừng ghi âm', 'color:#f87171;font-weight:bold');
       micActive = false;
-      if (langMode === 'vi' && micWs && micWs.readyState === 1) micWs.send('flush');
+      // Mic thống nhất dùng /mic — không cần flush
       if (micNode)   { micNode.disconnect(); micNode = null; }
       if (micCtx)    { micCtx.close(); micCtx = null; }
       if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
@@ -1169,6 +1246,44 @@
     }
 
     // ── Audio output ──────────────────────────────────────────
+    function initAnamWidgetEvents() {
+      if (!anamWidget) return;
+
+      anamWidget.addEventListener('anam-agent:session-started', () => {
+        if (!widgetMode) return;
+        card.classList.add('live');
+        badge.classList.add('live');
+        badgeText.textContent = 'Widget Live';
+        toast('Widget đã kết nối');
+      });
+
+      anamWidget.addEventListener('anam-agent:session-ended', () => {
+        if (!widgetMode) return;
+        card.classList.remove('live');
+        badge.classList.remove('live');
+        badgeText.textContent = 'Widget';
+        toast('Widget đã dừng');
+      });
+
+      anamWidget.addEventListener('anam-agent:error', (e) => {
+        const detail = e.detail || {};
+        toast(`Widget lỗi: ${detail.message || detail.code || 'không xác định'}`);
+      });
+
+      anamWidget.addEventListener('anam-agent:message-sent', (e) => {
+        const detail = e.detail || {};
+        const content = detail.content || '';
+        if (content) addOrUpdateBubble(`widget-user::${Date.now()}`, 'user', content, true);
+      });
+
+      anamWidget.addEventListener('anam-agent:message-received', (e) => {
+        const detail = e.detail || {};
+        const content = detail.content || '';
+        const role = detail.role === 'user' ? 'user' : 'assistant';
+        if (content) addOrUpdateBubble(`widget-${role}::${Date.now()}`, role, content, true);
+      });
+    }
+
     function startAudio() {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: OUTPUT_SAMPLE_RATE });
       audioWs  = new WebSocket('ws://localhost:8000/audio');
@@ -1204,7 +1319,88 @@
     }
 
     // ── Session state ─────────────────────────────────────────
+    function syncChatHeight() {
+      if (!chatPanel || !card) return;
+      if (window.matchMedia('(max-width: 780px)').matches) {
+        chatPanel.style.height = '';
+        return;
+      }
+      const h = card.getBoundingClientRect().height;
+      if (h > 0) chatPanel.style.height = `${Math.round(h)}px`;
+    }
+
+    function syncLecturePanelHeight() {
+      if (!nextVideosPanel || !lecturePlayerSide) return;
+      if (window.matchMedia('(max-width: 780px)').matches) {
+        nextVideosPanel.style.height = '';
+        return;
+      }
+      const h = lecturePlayerSide.getBoundingClientRect().height;
+      if (h > 0) nextVideosPanel.style.height = `${Math.round(h)}px`;
+    }
+
+    async function toggleWidgetMode() {
+      await setWidgetMode(!widgetMode);
+    }
+
+    async function setWidgetMode(enabled) {
+      if (enabled === widgetMode) return;
+      if (enabled && sessionLive) await stopSession(false);
+      if (enabled && !sessionLive && btnStart.disabled) {
+        clearInterval(polling);
+        polling = null;
+        await fetch(`${BASE}/stop`, { method: 'POST' }).catch(() => {});
+      }
+
+      widgetMode = enabled;
+      clearInterval(polling);
+      polling = null;
+      stopMic();
+      stopAudio();
+      stopChat();
+      avatar.src = '';
+
+      card.classList.toggle('widget-mode', widgetMode);
+      btnWidgetMode.classList.toggle('active', widgetMode);
+      btnWidgetMode.textContent = widgetMode
+        ? 'Quay lại chế độ hiện tại'
+        : 'Bạn gặp lỗi khi trò chuyện ư? Dùng chế độ khác';
+
+      if (widgetMode) {
+        ph.classList.add('hidden');
+        spinner.style.display = 'none';
+        card.classList.remove('live');
+        badge.classList.remove('live');
+        badgeText.textContent = 'Widget';
+        btnStart.disabled = true;
+        btnStop.disabled = true;
+        btnMic.disabled = true;
+        btnLang.disabled = true;
+        msgInput.disabled = true;
+        btnSend.disabled = true;
+        toast('Đã chuyển sang chế độ Anam Widget');
+      } else {
+        ph.classList.remove('hidden');
+        spinner.style.display = 'none';
+        phText.textContent = 'Nhấn Start để bắt đầu';
+        phHint.style.display = '';
+        card.classList.remove('live');
+        badge.classList.remove('live');
+        badgeText.textContent = 'Offline';
+        btnStart.disabled = false;
+        btnStop.disabled = true;
+        btnMic.disabled = true;
+        btnLang.disabled = false;
+        msgInput.disabled = true;
+        btnSend.disabled = true;
+        updateLangBtn();
+        toast('Đã quay lại chế độ hiện tại');
+      }
+      requestAnimationFrame(syncChatHeight);
+    }
+
     function setLive(live) {
+      if (widgetMode) return;
       sessionLive = live;
       if (live) {
         avatar.src = `${BASE}/video?t=${Date.now()}`;
@@ -1217,10 +1413,12 @@
         btnStop.disabled   = false;
         btnMic.disabled    = false;
         btnStart.disabled  = true;
+        btnLang.disabled   = false;
         updateLangBtn(); // show locked state
         startAudio();
         startChat();
         hideLecturePanel();
+        requestAnimationFrame(syncChatHeight);
         toast(`✅ Kết nối thành công (${langMode.toUpperCase()}) — bắt đầu hỏi Avatar!`);
       } else {
         avatar.src = '';
@@ -1235,17 +1433,22 @@
         btnSend.disabled  = true;
         btnStop.disabled  = true;
         btnMic.disabled   = true;
-        btnLang.disabled  = true;
         btnStart.disabled = false;
+        btnLang.disabled  = false;
         updateLangBtn(); // show unlocked state
         stopMic();
         stopAudio();
         stopChat();
+        requestAnimationFrame(syncChatHeight);
       }
     }
 
     // ── Session actions ───────────────────────────────────────
     async function startSession() {
+      if (widgetMode) {
+        toast('Đang ở chế độ Anam Widget');
+        return;
+      }
       btnStart.disabled = true;
       spinner.style.display = 'block';
       phText.textContent = 'Đang kết nối...';
@@ -1267,11 +1470,11 @@
       }, 1000);
     }
 
-    async function stopSession() {
+    async function stopSession(showToast = true) {
       clearInterval(polling);
       await fetch(`${BASE}/stop`, { method: 'POST' });
       setLive(false);
-      toast('🛑 Đã dừng kết nối');
+      if (showToast) toast('🛑 Đã dừng kết nối');
     }
 
     async function sendMessage() {
@@ -1385,6 +1588,7 @@
           btn.className = 'btn-load-sub done';
           toast(`✅ Đã tải ${subtitlesCues.length} phụ đề (${source})`);
           updateSubtitle(lectureVid.currentTime);
+          requestAnimationFrame(syncLecturePanelHeight);
         } else {
           btn.textContent = '❌ Không tìm thấy';
           btn.className = 'btn-load-sub error';
@@ -1436,6 +1640,7 @@
 
     lectureVid.addEventListener('timeupdate', () => updateSubtitle(lectureVid.currentTime));
     lectureVid.addEventListener('seeked', () => { currentCueIdx = -1; updateSubtitle(lectureVid.currentTime); });
+    lectureVid.addEventListener('loadedmetadata', () => requestAnimationFrame(syncLecturePanelHeight));
 
     // ── Side panel tab switching ─────────────────────────────────
     function switchSideTab(tabName) {
@@ -1533,6 +1738,12 @@
 
     // Init lang button state on load
     updateLangBtn();
+    initAnamWidgetEvents();
+    syncChatHeight();
+    syncLecturePanelHeight();
+    window.addEventListener('resize', syncChatHeight);
+    window.addEventListener('resize', syncLecturePanelHeight);
   </script>
+  <script src="https://unpkg.com/@anam-ai/agent-widget" async></script>
 </body>
 </html>
