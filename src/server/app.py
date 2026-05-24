@@ -10,6 +10,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 import cv2
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
@@ -57,6 +58,8 @@ audio_clients: list[WebSocket] = []
 chat_clients: list[WebSocket] = []
 
 agent_audio_stream = None
+_thread_pool = ThreadPoolExecutor(max_workers=2)
+whisper_model = None
 
 # ── Anam client — khởi tạo mặc định, sẽ được tạo lại khi start với lang ──────
 # Client sẽ được tạo động trong /start theo ngôn ngữ được chọn
@@ -635,6 +638,7 @@ async def stt_ws(websocket: WebSocket):
     gom đủ chunk rồi dùng Whisper nhận dạng tiếng Việt,
     sau đó gửi kết quả text vào Anam qua send_message().
     """
+    global whisper_model
     await websocket.accept()
 
     if not current_session or not is_connected:
@@ -644,16 +648,33 @@ async def stt_ws(websocket: WebSocket):
 
     sample_rate = int(websocket.query_params.get("sample_rate", 16000))
     lang = websocket.query_params.get("lang", "vi")
-    chunk_ms = int(websocket.query_params.get("chunk_ms", 1500))
+    chunk_ms = int(websocket.query_params.get("chunk_ms", 3000))
 
     bytes_needed = int(sample_rate * (chunk_ms / 1000) * 2)
 
-    print(f"[STT-VI] STT client ket noi: {sample_rate}Hz, lang={lang}, chunk_ms={chunk_ms}")
+    if whisper_model is None:
+        import whisper
+        loop = asyncio.get_event_loop()
+        print("[STT] Loading Whisper model 'base'...")
+        whisper_model = await loop.run_in_executor(
+            _thread_pool,
+            lambda: whisper.load_model("base"),
+        )
+
+    print(f"[STT] STT client ket noi: {sample_rate}Hz, lang={lang}, chunk_ms={chunk_ms}")
     pcm_buffer = bytearray()
+    last_sent_text = ""
 
     def run_whisper(pcm_bytes: bytes) -> str:
         """Chạy Whisper trong thread pool để không block event loop."""
         audio_np = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        if sample_rate != 16000 and len(audio_np) > 0:
+            target_len = max(1, int(len(audio_np) * 16000 / sample_rate))
+            audio_np = np.interp(
+                np.linspace(0, len(audio_np), target_len, endpoint=False),
+                np.arange(len(audio_np)),
+                audio_np,
+            ).astype(np.float32)
         result = whisper_model.transcribe(audio_np, language=lang, fp16=False)
         return result["text"].strip()
 
@@ -672,6 +693,9 @@ async def stt_ws(websocket: WebSocket):
                     text = await loop.run_in_executor(_thread_pool, run_whisper, chunk)
 
                     if text and current_session:
+                        if text == last_sent_text:
+                            continue
+                        last_sent_text = text
                         print(f"[STT] Nhan dang: '{text}'")
                         await broadcast_chat({
                             "type": "stream",
@@ -692,6 +716,9 @@ async def stt_ws(websocket: WebSocket):
                     loop = asyncio.get_event_loop()
                     text = await loop.run_in_executor(_thread_pool, run_whisper, chunk)
                     if text:
+                        if text == last_sent_text:
+                            continue
+                        last_sent_text = text
                         print(f"[STT-FLUSH] Nhan dang: '{text}'")
                         await broadcast_chat({
                             "type": "stream",

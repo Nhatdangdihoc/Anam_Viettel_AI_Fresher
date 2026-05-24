@@ -1036,7 +1036,7 @@
     }
 
     // ── Mic (AudioWorklet + WebSocket) ────────────────────────
-    // Thống nhất endpoint /mic?lang=... cho cả EN lẫn VI
+    // Speech-to-text local: gửi PCM lên /stt, backend Whisper -> text -> Anam.
     const MIC_SAMPLE_RATE = 16000;
     const MIC_CHANNELS    = 1;
     let micStream = null, micCtx = null, micWs = null, micNode = null;
@@ -1082,9 +1082,8 @@
       await micCtx.audioWorklet.addModule(wUrl);
       URL.revokeObjectURL(wUrl);
 
-      // ── Thống nhất /mic?lang=... cho cả EN và VI ──
-      // Backend /mic sẽ tự xử lý STT theo language_code đã set khi /start
-      const wsUrl = `ws://localhost:8000/mic?sample_rate=${MIC_SAMPLE_RATE}&channels=${MIC_CHANNELS}&lang=${langMode}`;
+      const actualSampleRate = Math.round(micCtx.sampleRate);
+      const wsUrl = `ws://localhost:8000/stt?sample_rate=${actualSampleRate}&channels=${MIC_CHANNELS}&lang=${langMode}&chunk_ms=3000`;
 
       console.log(`[MIC] Kết nối WS: ${wsUrl}`);
       micWs = new WebSocket(wsUrl);
@@ -1139,7 +1138,6 @@
     function stopMic() {
       console.log('%c[MIC] stopMic() — dừng ghi âm', 'color:#f87171;font-weight:bold');
       micActive = false;
-      // Mic thống nhất dùng /mic — không cần flush
       if (micNode)   { micNode.disconnect(); micNode = null; }
       if (micCtx)    { micCtx.close(); micCtx = null; }
       if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
