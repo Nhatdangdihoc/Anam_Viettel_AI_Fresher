@@ -470,47 +470,26 @@
     .vol-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width 0.05s linear; }
 
     /* Push-to-Talk */
-
     #btn-mic.ptt-active {
-
       background: rgba(74,222,128,0.18); border-color: #22c55e;
-
       color: #16a34a; box-shadow: 0 0 20px rgba(74,222,128,0.4);
-
       animation: pttPulse 0.8s ease-in-out infinite;
-
     }
-
     @keyframes pttPulse {
-
       0%,100% { box-shadow: 0 0 12px rgba(74,222,128,0.3); transform: scale(1); }
-
       50%      { box-shadow: 0 0 28px rgba(74,222,128,0.6); transform: scale(1.05); }
-
     }
-
     .ptt-hint {
-
       font-family: 'Roboto', sans-serif; font-size: 9px; font-weight: 500;
-
       color: var(--muted2); letter-spacing: 0.03em; white-space: nowrap;
-
       transition: color 0.2s;
-
     }
-
     .ptt-hint.active { color: #16a34a; font-weight: 700; }
-
     .ptt-hint kbd {
-
       font-family: 'Roboto', sans-serif; font-size: 8px; font-weight: 700;
-
       padding: 1px 4px; border-radius: 3px; border: 1px solid var(--border2);
-
       background: var(--surface2); color: var(--text);
-
     }
-
 
     .meta { text-align: left; }
     .meta h1 { font-family: 'Roboto', sans-serif; font-size: 17px; font-weight: 900; letter-spacing: -0.01em; }
@@ -703,7 +682,7 @@
           <div id="anam-widget-wrap">
             <anam-agent
               id="anam-widget"
-              agent-id="9eec4205-2840-412f-b53f-86d8c47dd539"
+              agent-id="e2747fda-28d5-42e0-be0f-83b06e8d196d"
               layout="inline"
               ui-text-input="true"
               call-to-action="Bắt đầu chế độ dự phòng"
@@ -994,7 +973,6 @@
     initVideoList();
 
     // ── Language mode ─────────────────────────────────────────
-    // langMode = ngôn ngữ sẽ dùng cho session tiếp theo (hoặc session hiện tại nếu chưa live)
     let langMode = 'vi';
     let sessionLive = false;
     let widgetMode = false;
@@ -1022,12 +1000,10 @@
         toast('Widget mode tự quản lý ngôn ngữ trong Anam Lab');
         return;
       }
-      // Nếu session đang live, chỉ thông báo — không cho đổi
       if (sessionLive) {
         toast(`⚠️ Avatar đang live — Stop session rồi đổi ngôn ngữ`);
         return;
       }
-      // Nếu mic đang bật, tắt trước
       if (micActive) stopMic();
 
       langMode = langMode === 'en' ? 'vi' : 'en';
@@ -1036,7 +1012,6 @@
     }
 
     // ── Mic (AudioWorklet + WebSocket) ────────────────────────
-    // Speech-to-text local: gửi PCM lên /stt, backend Whisper -> text -> Anam.
     const MIC_SAMPLE_RATE = 16000;
     const MIC_CHANNELS    = 1;
     let micStream = null, micCtx = null, micWs = null, micNode = null;
@@ -1112,7 +1087,7 @@
         if (micWs && micWs.readyState === 1) {
           micWs.send(e.data);
           chunkCount++;
-          if (chunkCount % 5 === 1) // Log mỗi 5 chunk để không spam
+          if (chunkCount % 5 === 1)
             console.log(`[MIC] Chunk #${chunkCount} gửi: ${e.data.byteLength} bytes | WS state=${micWs.readyState}`);
         } else {
           console.warn(`[MIC] Chunk bỏ qua — WS readyState=${micWs?.readyState}`);
@@ -1185,16 +1160,13 @@
       e.preventDefault();
       pttHeld = false;
 
-      // Flush buffer → Whisper xử lý phần âm thanh còn lại
       if (micWs && micWs.readyState === 1) micWs.send('flush');
 
-      // Reset UI
       btnMic.classList.remove('ptt-active');
       if (pttHint) { pttHint.textContent = 'giữ <kbd>Space</kbd> để nói'; pttHint.innerHTML = 'giữ <kbd>Space</kbd> để nói'; pttHint.classList.remove('active'); }
 
-      // Dừng mic sau delay ngắn để flush kịp xử lý
       setTimeout(() => {
-        if (!pttHeld) { // kiểm tra lại phòng trường hợp nhấn lại luôn
+        if (!pttHeld) {
           stopMic();
           toast('✅ Đã gửi âm thanh — đang xử lý...');
         }
@@ -1250,7 +1222,7 @@
       anamWidgetWrap.innerHTML = `
         <anam-agent
           id="anam-widget"
-          agent-id="9eec4205-2840-412f-b53f-86d8c47dd539"
+          agent-id="e2747fda-28d5-42e0-be0f-83b06e8d196d"
           layout="inline"
           ui-text-input="true"
           call-to-action="Bắt đầu chế độ dự phòng"
@@ -1430,7 +1402,7 @@
         btnMic.disabled    = false;
         btnStart.disabled  = true;
         btnLang.disabled   = false;
-        updateLangBtn(); // show locked state
+        updateLangBtn();
         startAudio();
         startChat();
         hideLecturePanel();
@@ -1451,7 +1423,7 @@
         btnMic.disabled   = true;
         btnStart.disabled = false;
         btnLang.disabled  = false;
-        updateLangBtn(); // show unlocked state
+        updateLangBtn();
         stopMic();
         stopAudio();
         stopChat();
@@ -1470,7 +1442,6 @@
       phText.textContent = 'Đang kết nối...';
       phHint.style.display = 'none';
       clearChat();
-      // Truyền langMode vào /start để backend tạo AnamClient đúng ngôn ngữ
       await fetch(`${BASE}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1687,12 +1658,11 @@
     let summaryLang = 'vi';
 
     function toggleSummaryLang(lang) {
-      if (summaryLang === lang) return; // Không làm gì nếu cùng ngôn ngữ
+      if (summaryLang === lang) return;
       summaryLang = lang;
       document.getElementById('btn-sum-vi').classList.toggle('active', lang === 'vi');
       document.getElementById('btn-sum-en').classList.toggle('active', lang === 'en');
 
-      // If we already have a summary loaded, re-load in new language
       const contentEl = document.getElementById('summary-content');
       if (contentEl.style.display !== 'none') {
         loadSummary();
@@ -1752,7 +1722,7 @@
       contentEl.innerHTML = renderMarkdown(markdownText);
     }
 
-    // Init lang button state on load
+    // Init
     updateLangBtn();
     resetAnamWidget();
     syncChatHeight();
