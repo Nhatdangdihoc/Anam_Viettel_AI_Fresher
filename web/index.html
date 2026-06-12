@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Anam Avatar — Viettel AI Fresher</title>
+  <title>CHƯƠNG TRÌNH HÀNH ĐỘNG QUỐC GIA VỀ PHỤ NỮ, HÒA BÌNH VÀ AN NINH</title>
   <meta name="description" content="Hệ thống học liệu AI với Avatar tương tác thời gian thực" />
   <link rel="icon" type="image/png" href="/logo/logo.png" />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
@@ -33,7 +33,7 @@
     /* ── Page header ──────────────────────────────────────────── */
     .page-header {
       position: relative; z-index: 1;
-      width: 100%; max-width: 1280px;
+      width: 100%; max-width: 100%;
       display: flex; align-items: center; justify-content: space-between;
       padding: 0;
     }
@@ -57,7 +57,7 @@
     /* ── Lecture video panel ──────────────────────────────────── */
     .lecture-wrap {
       position: relative; z-index: 1;
-      width: 100%; max-width: 1280px;
+      width: 100%; max-width: 100%;
       border-radius: 20px; overflow: hidden;
       border: 1px solid var(--border2);
       background: var(--surface);
@@ -90,7 +90,7 @@
     .lecture-wrap.collapsed .lecture-chevron { transform: rotate(-90deg); }
     .lecture-body { padding: 0; display: flex; align-items: stretch; }
     .lecture-player-side { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-    .lecture-video-wrap { position: relative; width: min(100%, 980px); aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
+    .lecture-video-wrap { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
     #lecture-video {
       display: block; width: 100%; height: 100%;
       object-fit: contain; object-position: center center; background: #000;
@@ -430,20 +430,15 @@
       display: flex; align-items: center; gap: 5px; transition: all 0.2s;
     }
     #btn-lang:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
-    /* EN mode */
     #btn-lang.en {
       background: rgba(59,130,246,0.10); border-color: rgba(59,130,246,0.35);
       color: #60a5fa;
     }
-    /* VI mode */
     #btn-lang.vi {
       background: rgba(218,59,59,0.12); border-color: rgba(218,59,59,0.45);
       color: #ff8080; box-shadow: 0 0 10px rgba(218,59,59,0.15);
     }
-    /* locked (live session) — adds lock indicator */
-    #btn-lang.locked {
-      opacity: 0.7; cursor: default;
-    }
+    #btn-lang.locked { opacity: 0.7; cursor: default; }
 
     /* Mic button */
     #btn-mic {
@@ -570,14 +565,15 @@
 
     .legacy-avatar-shell { display: none; }
 
+    /* ── Anam Chatbot Popup — nhỏ gọn hơn ─────────────────────── */
     .anam-chatbot {
       position: fixed; right: 24px; bottom: 24px; z-index: 1200;
       display: flex; flex-direction: column; align-items: flex-end; gap: 14px;
       pointer-events: none;
     }
     .anam-chatbot-panel {
-      width: min(380px, calc(100vw - 24px));
-      border-radius: 24px; overflow: hidden;
+      width: min(300px, calc(100vw - 24px));
+      border-radius: 20px; overflow: hidden;
       border: 1px solid rgba(255,255,255,0.72);
       background: rgba(255,255,255,0.94);
       box-shadow: 0 24px 80px rgba(55,32,46,0.28);
@@ -590,37 +586,37 @@
       display: none;
     }
     .anam-chatbot-header {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 12px;
       background: linear-gradient(135deg, rgba(238,0,51,0.08), rgba(255,255,255,0.96));
       border-bottom: 1px solid rgba(17,24,39,0.08);
     }
-    .anam-chatbot-heading { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .anam-chatbot-heading { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
     .anam-chatbot-title {
-      font-family: 'Roboto', sans-serif; font-size: 14px; font-weight: 800;
+      font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 800;
       color: #25131d; letter-spacing: 0.02em;
     }
     .anam-chatbot-status {
-      font-size: 11px; color: var(--muted);
+      font-size: 10px; color: var(--muted);
       letter-spacing: 0.04em; text-transform: uppercase;
     }
     .anam-chatbot-close {
-      width: 36px; height: 36px; padding: 0; border-radius: 50%;
+      width: 30px; height: 30px; padding: 0; border-radius: 50%;
       border: 1px solid rgba(17,24,39,0.08);
       background: rgba(255,255,255,0.86);
-      color: #3a2232; font-size: 18px; line-height: 1; box-shadow: none;
+      color: #3a2232; font-size: 16px; line-height: 1; box-shadow: none;
     }
     .anam-chatbot-close:hover { transform: translateY(-1px); background: #fff; }
     .anam-chatbot-body {
-      padding: 14px;
+      padding: 10px;
       background:
         radial-gradient(circle at top left, rgba(238,0,51,0.10), transparent 32%),
         linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,245,247,0.96));
     }
     .anam-chatbot-frame {
       width: 100%;
-      height: 236px;
-      border-radius: 18px; overflow: hidden; background: #120b12;
+      height: 180px;
+      border-radius: 14px; overflow: hidden; background: #120b12;
       border: 1px solid rgba(17,24,39,0.08);
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
     }
@@ -630,7 +626,7 @@
     }
     .anam-chatbot-launcher {
       display: inline-flex; align-items: center; gap: 10px;
-      padding: 13px 18px; border-radius: 999px;
+      padding: 11px 16px; border-radius: 999px;
       background: linear-gradient(135deg, #ee0033, #ff5f7f);
       color: #fff; box-shadow: 0 18px 42px rgba(238,0,51,0.32);
       pointer-events: auto;
@@ -644,19 +640,19 @@
       box-shadow: 0 18px 42px rgba(15,159,103,0.28);
     }
     .anam-chatbot-launcher-icon {
-      width: 18px; height: 18px; border-radius: 50%;
+      width: 16px; height: 16px; border-radius: 50%;
       background: rgba(255,255,255,0.24);
       display: inline-flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; flex-shrink: 0;
+      font-size: 11px; font-weight: 700; flex-shrink: 0;
     }
     .anam-chatbot-launcher-text {
-      font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
     }
 
     @media (max-width: 640px) {
       .anam-chatbot { right: 12px; bottom: 12px; left: 12px; align-items: stretch; }
       .anam-chatbot-panel { width: 100%; }
-      .anam-chatbot-frame { height: 228px; }
+      .anam-chatbot-frame { height: 160px; }
       .anam-chatbot-launcher { align-self: flex-end; }
     }
   </style>
@@ -664,15 +660,15 @@
 <body>
 
   <!-- Page header -->
-  <header class="page-header">
+  <!-- <header class="page-header">
     <div class="brand">
       <img class="brand-logo" src="/logo/logo.png" alt="Viettel Logo" />
       <div>
-        <div class="brand-name">Viettel AI Fresher</div>
-        <div class="brand-sub">Interactive Learning Platform</div>
+        <div class="brand-name">Viettel Academy</div>
+        <div class="brand-sub"></div>
       </div>
     </div>
-  </header>
+  </header> -->
 
   <!-- Lecture video panel -->
   <div class="lecture-wrap" id="lecture-wrap">
@@ -680,7 +676,7 @@
       <span class="lecture-icon">🎬</span>
       <div class="lecture-title" id="lecture-panel-title">
         Bài giảng &nbsp;·&nbsp;
-        <span id="lecture-title-text">Lịch sử phát triển Viettel — Giai đoạn 3 (2010–2020)</span>
+        <span id="lecture-title-text">Chương trình hành động quốc gia về phụ nữ, hòa bình và an ninh</span>
       </div>
       <span class="lecture-chevron">▾</span>
     </div>
@@ -1133,9 +1129,7 @@
         toast('Ngôn ngữ được quản lý trực tiếp trong popup Anam');
         return;
       }
-
       syncChatHeight();
-
       if (widgetMode) {
         toast('Widget mode tự quản lý ngôn ngữ trong Anam Lab');
         return;
@@ -1145,7 +1139,6 @@
         return;
       }
       if (micActive) stopMic();
-
       langMode = langMode === 'en' ? 'vi' : 'en';
       updateLangBtn();
       toast(langMode === 'vi' ? '🇻🇳 Sẽ dùng tiếng Việt' : '🇬🇧 Sẽ dùng tiếng Anh');
@@ -1162,7 +1155,7 @@
         constructor() {
           super();
           this._buf = [];
-          this._chunkSize = 1600; // 100ms @ 16kHz
+          this._chunkSize = 1600;
         }
         process(inputs) {
           const ch = inputs[0][0];
@@ -1184,57 +1177,37 @@
 
     async function startMic() {
       if (!legacyAvatarEnabled || !btnMic || !volBar || !volFill) return;
-      console.log('%c[MIC] startMic() — xin quyền micro...', 'color:#22c55e;font-weight:bold');
       micStream = await navigator.mediaDevices.getUserMedia({ audio: {
         sampleRate: MIC_SAMPLE_RATE, channelCount: MIC_CHANNELS,
         echoCancellation: true, noiseSuppression: true, autoGainControl: true,
       }});
-      console.log('[MIC] getUserMedia OK — tracks:', micStream.getAudioTracks().map(t => t.label));
-
       micCtx = new AudioContext({ sampleRate: MIC_SAMPLE_RATE });
-      console.log(`[MIC] AudioContext: ${micCtx.sampleRate}Hz, state=${micCtx.state}`);
       const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
       const wUrl = URL.createObjectURL(blob);
       await micCtx.audioWorklet.addModule(wUrl);
       URL.revokeObjectURL(wUrl);
-
       const actualSampleRate = Math.round(micCtx.sampleRate);
       const wsUrl = `ws://localhost:8000/stt?sample_rate=${actualSampleRate}&channels=${MIC_CHANNELS}&lang=${langMode}&chunk_ms=3000`;
-
-      console.log(`[MIC] Kết nối WS: ${wsUrl}`);
       micWs = new WebSocket(wsUrl);
       micWs.binaryType = 'arraybuffer';
       micWs.onopen  = () => console.log(`[MIC] WS open (${langMode})`);
       micWs.onerror = (e) => { console.error('Mic WS error', e); stopMic(); };
       micWs.onclose = () => { if (micActive) stopMic(); };
-
       await new Promise((res, rej) => {
         if (micWs.readyState === 1) return res();
         micWs.addEventListener('open',  res, { once: true });
         micWs.addEventListener('error', rej, { once: true });
       });
-
       const source   = micCtx.createMediaStreamSource(micStream);
       micNode        = new AudioWorkletNode(micCtx, 'pcm-processor');
       const analyser = micCtx.createAnalyser();
       analyser.fftSize = 256;
       const dataArr  = new Uint8Array(analyser.frequencyBinCount);
-
       source.connect(analyser);
       source.connect(micNode);
-
-      let chunkCount = 0;
       micNode.port.onmessage = (e) => {
-        if (micWs && micWs.readyState === 1) {
-          micWs.send(e.data);
-          chunkCount++;
-          if (chunkCount % 5 === 1)
-            console.log(`[MIC] Chunk #${chunkCount} gửi: ${e.data.byteLength} bytes | WS state=${micWs.readyState}`);
-        } else {
-          console.warn(`[MIC] Chunk bỏ qua — WS readyState=${micWs?.readyState}`);
-        }
+        if (micWs && micWs.readyState === 1) micWs.send(e.data);
       };
-
       function drawVolume() {
         if (!micActive) return;
         analyser.getByteFrequencyData(dataArr);
@@ -1243,17 +1216,14 @@
         requestAnimationFrame(drawVolume);
       }
       drawVolume();
-
       micActive = true;
       btnMic.classList.add('active');
       btnMic.title = 'Tắt microphone';
       volBar.classList.add('visible');
-      console.log('%c[MIC] Đang ghi âm — nói gì đi!', 'color:#22c55e;font-weight:bold;font-size:13px');
     }
 
     function stopMic() {
       if (!legacyAvatarEnabled || !btnMic || !volBar || !volFill) return;
-      console.log('%c[MIC] stopMic() — dừng ghi âm', 'color:#f87171;font-weight:bold');
       micActive = false;
       if (micNode)   { micNode.disconnect(); micNode = null; }
       if (micCtx)    { micCtx.close(); micCtx = null; }
@@ -1277,7 +1247,7 @@
       }
     }
 
-    // ── Push-to-Talk (giữ Space để nói) ───────────────────────
+    // ── Push-to-Talk ───────────────────────────────────────────
     let pttHeld = false;
     const pttHint = document.getElementById('ptt-hint');
 
@@ -1286,18 +1256,14 @@
       if (e.code !== 'Space' || pttHeld || micActive) return;
       const tag = document.activeElement.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement.isContentEditable) return;
-
       e.preventDefault();
       pttHeld = true;
-      console.log('%c[PTT] Space GIỮ — bắt đầu ghi âm', 'color:#fbbf24;font-weight:bold');
-
       try {
         await startMic();
         btnMic.classList.add('ptt-active');
         if (pttHint) { pttHint.textContent = '🔴 Đang nghe... (thả Space để gửi)'; pttHint.classList.add('active'); }
       } catch (err) {
         pttHeld = false;
-        console.error('[PTT] Lỗi bật mic:', err);
         toast('❌ Không thể bật mic: ' + err.message);
       }
     });
@@ -1307,18 +1273,10 @@
       if (e.code !== 'Space' || !pttHeld) return;
       e.preventDefault();
       pttHeld = false;
-
       if (micWs && micWs.readyState === 1) micWs.send('flush');
-
       btnMic.classList.remove('ptt-active');
-      if (pttHint) { pttHint.textContent = 'giữ <kbd>Space</kbd> để nói'; pttHint.innerHTML = 'giữ <kbd>Space</kbd> để nói'; pttHint.classList.remove('active'); }
-
-      setTimeout(() => {
-        if (!pttHeld) {
-          stopMic();
-          toast('✅ Đã gửi âm thanh — đang xử lý...');
-        }
-      }, 350);
+      if (pttHint) { pttHint.innerHTML = 'giữ <kbd>Space</kbd> để nói'; pttHint.classList.remove('active'); }
+      setTimeout(() => { if (!pttHeld) { stopMic(); toast('✅ Đã gửi âm thanh — đang xử lý...'); } }, 350);
     });
 
     // ── Chat UI ───────────────────────────────────────────────
@@ -1385,30 +1343,25 @@
 
     function initAnamWidgetEvents() {
       if (!anamWidget) return;
-
       anamWidget.addEventListener('anam-agent:session-started', () => {
         if (chatbotLauncher) chatbotLauncher.classList.add('live');
         if (chatbotStatus) chatbotStatus.textContent = 'Đang trò chuyện';
         toast('Widget đã kết nối');
       });
-
       anamWidget.addEventListener('anam-agent:session-ended', () => {
         if (chatbotLauncher) chatbotLauncher.classList.remove('live');
         if (chatbotStatus) chatbotStatus.textContent = 'Sẵn sàng kết nối';
         toast('Widget đã dừng');
       });
-
       anamWidget.addEventListener('anam-agent:error', (e) => {
         const detail = e.detail || {};
         toast(`Widget lỗi: ${detail.message || detail.code || 'không xác định'}`);
       });
-
       anamWidget.addEventListener('anam-agent:message-sent', (e) => {
         const detail = e.detail || {};
         const content = detail.content || '';
         if (content) addOrUpdateBubble(`widget-user::${Date.now()}`, 'user', content, true);
       });
-
       anamWidget.addEventListener('anam-agent:message-received', (e) => {
         const detail = e.detail || {};
         const content = detail.content || '';
@@ -1508,7 +1461,6 @@
     async function setWidgetMode(enabled) {
       if (enabled === widgetMode) return;
       btnWidgetMode.disabled = true;
-
       clearInterval(polling);
       polling = null;
       stopMic();
@@ -1519,15 +1471,12 @@
       avatar.src = '';
       clearChat();
       resetAnamWidget();
-
       widgetMode = enabled;
-
       card.classList.toggle('widget-mode', widgetMode);
       btnWidgetMode.classList.toggle('active', widgetMode);
       btnWidgetMode.textContent = widgetMode
         ? 'Quay lại chế độ hiện tại'
         : 'Bạn gặp lỗi khi trò chuyện ư? Dùng chế độ khác';
-
       if (widgetMode) {
         ph.classList.add('hidden');
         spinner.style.display = 'none';
@@ -1610,10 +1559,7 @@
 
     // ── Session actions ───────────────────────────────────────
     async function startSession() {
-      if (widgetMode) {
-        toast('Đang ở chế độ Anam Widget');
-        return;
-      }
+      if (widgetMode) { toast('Đang ở chế độ Anam Widget'); return; }
       btnStart.disabled = true;
       spinner.style.display = 'block';
       phText.textContent = 'Đang kết nối...';
@@ -1839,11 +1785,8 @@
       summaryLang = lang;
       document.getElementById('btn-sum-vi').classList.toggle('active', lang === 'vi');
       document.getElementById('btn-sum-en').classList.toggle('active', lang === 'en');
-
       const contentEl = document.getElementById('summary-content');
-      if (contentEl.style.display !== 'none') {
-        loadSummary();
-      }
+      if (contentEl.style.display !== 'none') loadSummary();
     }
 
     async function loadSummary() {
