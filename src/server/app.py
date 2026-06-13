@@ -396,7 +396,6 @@ async def load_subtitles_api(body: dict):
     _thread_pool = ThreadPoolExecutor(max_workers=2)
 
     subtitle_url = body.get("subtitle_url")
-    video_url = body.get("video_url")
     item_id = body.get("item_id")
     video_id = body.get("video_id")
 
@@ -478,7 +477,10 @@ async def load_subtitles_api(body: dict):
         except Exception as e:
             return JSONResponse(status_code=500, content={"ok": False, "error": f"Lỗi tải phụ đề HeyGen: {e}"})
 
-    return JSONResponse(status_code=400, content={"ok": False, "error": "Cần subtitle_url, video_url hoặc item_id"})
+    return JSONResponse(
+        status_code=400,
+        content={"ok": False, "error": "Cần item_id (video local) hoặc subtitle_url (video HeyGen)"},
+    )
 
 
 # ─── Lecture Summarization ─────────────────────────────────────────────────────
