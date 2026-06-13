@@ -5,6 +5,7 @@ Serve giao diện web, video bài giảng, phụ đề, và kết nối Anam AI 
 
 import asyncio
 import sys
+import logging
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.stderr.reconfigure(encoding="utf-8", errors="replace")
@@ -23,6 +24,12 @@ import os
 import uvicorn
 from pathlib import Path
 import httpx
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger("anam.server")
 
 # ── Resolve project paths ─────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -353,6 +360,7 @@ async def heygen_videos(
     folder_id: str = Query(default=None),
 ):
     if not HEYGEN_API_KEY:
+        logger.warning("HEYGEN_API_KEY is missing; /api/heygen/videos cannot call HeyGen")
         return JSONResponse(
             status_code=503,
             content={"error": "HEYGEN_API_KEY chưa được cấu hình trong .env"}
@@ -364,6 +372,7 @@ async def heygen_videos(
         params["title"] = title
     if folder_id:
         params["folder_id"] = folder_id
+    logger.info("Calling HeyGen videos API with params=%s", params)
     async with httpx.AsyncClient(timeout=15.0) as client_http:
         try:
             resp = await client_http.get(
@@ -374,17 +383,33 @@ async def heygen_videos(
             resp.raise_for_status()
             data = resp.json()
             if "data" in data and isinstance(data["data"], list):
+                logger.info("HeyGen returned %s video(s) before filtering", len(data["data"]))
+                for index, video in enumerate(data["data"], start=1):
+                    logger.info(
+                        "HeyGen video[%s]: id=%s title=%r status=%s has_video_url=%s has_subtitle_url=%s subtitle_url=%r caption=%r",
+                        index,
+                        video.get("video_id") or video.get("id"),
+                        video.get("title"),
+                        video.get("status"),
+                        bool(video.get("video_url")),
+                        bool(video.get("subtitle_url")),
+                        video.get("subtitle_url"),
+                        video.get("caption"),
+                    )
                 data["data"] = [
                     v for v in data["data"]
                     if v.get("status") == "completed" and v.get("video_url")
                 ]
+                logger.info("HeyGen returned %s completed video(s) after filtering", len(data["data"]))
             return JSONResponse(content=data)
         except httpx.HTTPStatusError as e:
+            logger.exception("HeyGen API HTTP error: status=%s body=%s", e.response.status_code, e.response.text)
             return JSONResponse(
                 status_code=e.response.status_code,
                 content={"error": f"HeyGen API lỗi: {e.response.text}"}
             )
         except Exception as e:
+            logger.exception("Unexpected error while calling HeyGen videos API")
             return JSONResponse(status_code=500, content={"error": str(e)})
 
 
@@ -398,11 +423,18 @@ async def load_subtitles_api(body: dict):
     subtitle_url = body.get("subtitle_url")
     item_id = body.get("item_id")
     video_id = body.get("video_id")
+    logger.info(
+        "Subtitle load request: item_id=%r video_id=%r has_subtitle_url=%s",
+        item_id,
+        video_id,
+        bool(subtitle_url),
+    )
 
     if item_id:
         srt_cache_dir = VIDEO_ITEMS_DIR / item_id / "srt"
         srt_cache_file = srt_cache_dir / "subtitle_vi_en.srt"
         if srt_cache_file.exists():
+            logger.info("Serving subtitle from local cache for item_id=%s", item_id)
             from src.pipeline.cleaner import clean_text
             cached = srt_cache_file.read_text(encoding="utf-8")
             cached = clean_text(cached)
@@ -434,14 +466,17 @@ async def load_subtitles_api(body: dict):
 
                     try:
                         srt_text = await loop.run_in_executor(_thread_pool, run_local_whisper)
+                        logger.info("Generated subtitle with local Whisper for item_id=%s", item_id)
                         return JSONResponse(content={"ok": True, "srt": srt_text, "source": "whisper-cached"})
                     except Exception as e:
+                        logger.exception("Local Whisper subtitle generation failed for item_id=%s", item_id)
                         return JSONResponse(status_code=500, content={"ok": False, "error": f"Lỗi Whisper local: {e}"})
                     break
 
     if video_id and not item_id:
         heygen_cache = SRT_CACHE_DIR / f"{video_id}_vi_en.srt"
         if heygen_cache.exists():
+            logger.info("Serving subtitle from HeyGen cache for video_id=%s", video_id)
             from src.pipeline.cleaner import clean_text
             cached = heygen_cache.read_text(encoding="utf-8")
             cached = clean_text(cached)
@@ -449,6 +484,7 @@ async def load_subtitles_api(body: dict):
 
     if subtitle_url:
         try:
+            logger.info("Downloading subtitle from HeyGen subtitle_url for video_id=%r", video_id)
             async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as c:
                 resp = await c.get(subtitle_url)
                 resp.raise_for_status()
@@ -473,10 +509,18 @@ async def load_subtitles_api(body: dict):
             if video_id:
                 os.makedirs(str(SRT_CACHE_DIR), exist_ok=True)
                 (SRT_CACHE_DIR / f"{video_id}_vi_en.srt").write_text(bilingual_srt, encoding="utf-8")
+                logger.info("Saved translated HeyGen subtitle cache for video_id=%s", video_id)
             return JSONResponse(content={"ok": True, "srt": bilingual_srt, "source": "heygen"})
         except Exception as e:
+            logger.exception("Failed to load subtitle from HeyGen for video_id=%r", video_id)
             return JSONResponse(status_code=500, content={"ok": False, "error": f"Lỗi tải phụ đề HeyGen: {e}"})
 
+    logger.warning(
+        "No subtitle source available: item_id=%r video_id=%r subtitle_url=%r",
+        item_id,
+        video_id,
+        subtitle_url,
+    )
     return JSONResponse(
         status_code=400,
         content={"ok": False, "error": "Cần item_id (video local) hoặc subtitle_url (video HeyGen)"},
