@@ -22,13 +22,7 @@
       display: flex; flex-direction: column; align-items: center;
       padding: 20px 16px 32px; gap: 20px;
     }
-    body::before {
-      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-      background:
-        radial-gradient(ellipse 70% 50% at 15% 15%, rgba(238,0,51,0.10) 0%, transparent 65%),
-        radial-gradient(ellipse 55% 45% at 85% 85%, rgba(238,0,51,0.09) 0%, transparent 65%),
-        radial-gradient(ellipse 40% 35% at 50% 0%, rgba(238,0,51,0.05) 0%, transparent 60%);
-    }
+    body::before { content: none; }
 
     /* ── Page header ──────────────────────────────────────────── */
     .page-header {
@@ -58,10 +52,10 @@
     .lecture-wrap {
       position: relative; z-index: 1;
       width: 100%; max-width: 100%;
-      border-radius: 20px; overflow: hidden;
-      border: 1px solid var(--border2);
-      background: var(--surface);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      border-radius: 22px; overflow: hidden;
+      border: 1px solid rgba(15,23,42,0.08);
+      background: linear-gradient(180deg, #eef1f4 0%, #e7ebef 100%);
+      box-shadow: 0 18px 40px rgba(15,23,42,0.08);
       transition: max-height 0.45s cubic-bezier(0.4,0,0.2,1),
                   opacity 0.35s ease, margin-bottom 0.4s ease;
       max-height: 900px; opacity: 1;
@@ -73,12 +67,12 @@
     }
     .lecture-header {
       display: flex; align-items: flex-start; gap: 10px;
-      padding: 13px 16px; cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface2);
+      padding: 13px 24px 13px 184px; cursor: default;
+      border-bottom: 1px solid rgba(15,23,42,0.06);
+      background: rgba(255,255,255,0.45);
       user-select: none; transition: background 0.2s;
     }
-    .lecture-header:hover { background: rgba(0,0,0,0.04); }
+    .lecture-header:hover { background: rgba(255,255,255,0.45); }
     .lecture-icon { font-size: 15px; flex-shrink: 0; }
     .lecture-title {
       flex: 1; min-width: 0;
@@ -113,10 +107,32 @@
       font-size: 12px; color: var(--muted); transition: transform 0.35s; flex-shrink: 0;
       align-self: flex-start; margin-top: 2px;
     }
+    .lecture-chevron { display: none; }
     .lecture-wrap.collapsed .lecture-chevron { transform: rotate(-90deg); }
-    .lecture-body { padding: 0; display: flex; align-items: stretch; }
-    .lecture-player-side { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-    .lecture-video-wrap { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
+    .lecture-body {
+      position: relative;
+      padding: 14px 20px 18px 40px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 56px;
+      gap: 15px;
+      align-items: start;
+      background: transparent;
+    }
+    .lecture-player-side {
+      min-width: 0; display: flex; flex-direction: column;
+      width: min(100%, 1150px);
+      margin: 0 auto;
+      transform: translateX(20px);
+    }
+    .lecture-video-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000; overflow: hidden;
+      margin: 0;
+      border-radius: 16px;
+      box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+    }
     #lecture-video {
       display: block; width: 100%; height: 100%;
       object-fit: contain; object-position: center center; background: #000;
@@ -139,7 +155,10 @@
     .lecture-meta {
       display: flex; align-items: center; gap: 10px;
       padding: 10px 16px; border-top: 1px solid var(--border);
-      background: var(--surface2); font-size: 12px; color: var(--muted2); flex-shrink: 0;
+      background: rgba(255,255,255,0.58); font-size: 12px; color: var(--muted2); flex-shrink: 0;
+      width: 100%;
+      margin: 0;
+      border-radius: 0 0 14px 14px;
     }
     .lecture-meta-tag {
       font-family: 'Roboto', sans-serif; font-size: 10px; font-weight: 700;
@@ -148,7 +167,13 @@
       background: rgba(238,0,51,0.12); color: var(--accent3);
       border: 1px solid rgba(238,0,51,0.2);
     }
-    .subtitle-panel { border-top: 1px solid var(--border); background: var(--surface); padding: 0; flex-shrink: 0; }
+    .subtitle-panel {
+      border-top: 1px solid var(--border); background: rgba(255,255,255,0.7); padding: 0; flex-shrink: 0;
+      width: 100%;
+      margin: 0;
+      border-radius: 14px;
+      overflow: hidden;
+    }
     .subtitle-header {
       display: flex; align-items: center; gap: 8px;
       padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface2);
@@ -201,14 +226,78 @@
 
     /* ── Next videos side panel ───────────────────────────────── */
     .next-videos-panel {
-      width: 280px; flex-shrink: 0;
-      border-left: 1px solid var(--border); background: var(--surface2);
-      display: flex; flex-direction: column; align-self: stretch; min-height: 0; overflow: hidden;
+      position: relative;
+      top: 0;
+      width: 56px; max-width: 56px; min-width: 56px;
+      flex-shrink: 0;
+      justify-self: start;
+      align-self: start;
+      overflow: visible;
+      z-index: 4;
+    }
+    .sidebar-menu-toggle {
+      width: 44px; height: 44px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--accent);
+      cursor: pointer;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .sidebar-menu-toggle:hover {
+      transform: none;
+      background: #fff;
+      border-color: rgba(238,0,51,0.22);
+    }
+    .menu-bars {
+      width: 16px; height: 12px; position: relative; display: block;
+    }
+    .menu-bars::before,
+    .menu-bars::after,
+    .menu-bars span {
+      content: ''; position: absolute; left: 0; right: 0;
+      height: 2px; border-radius: 999px; background: currentColor;
+      transition: transform 0.22s ease, top 0.22s ease, opacity 0.22s ease;
+    }
+    .menu-bars::before { top: 0; }
+    .menu-bars span { top: 5px; }
+    .menu-bars::after { top: 10px; }
+    .next-videos-panel.expanded .menu-bars::before {
+      top: 5px; transform: rotate(45deg);
+    }
+    .next-videos-panel.expanded .menu-bars span {
+      opacity: 0;
+    }
+    .next-videos-panel.expanded .menu-bars::after {
+      top: 5px; transform: rotate(-45deg);
+    }
+    .sidebar-panel-shell {
+      position: absolute;
+      top: 0; right: calc(100% + 12px);
+      width: 0; height: 100%;
+      display: flex; flex-direction: column;
+      opacity: 0; pointer-events: none; overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      transition: width 0.28s ease, opacity 0.22s ease;
+    }
+    .next-videos-panel.expanded .sidebar-panel-shell {
+      width: 340px;
+      opacity: 0.8;
+      pointer-events: auto;
     }
     .next-videos-header {
-      padding: 12px 14px; border-bottom: 1px solid var(--border);
+      padding: 14px 16px; border-bottom: 1px solid rgba(15, 23, 42, 0.08);
       display: flex; align-items: center; gap: 8px;
-      background: var(--surface); flex-shrink: 0;
+      background: #fff; flex-shrink: 0;
     }
     .next-videos-header-icon { font-size: 14px; }
     .next-videos-header-title {
@@ -278,18 +367,33 @@
     .nv-load-more:hover { background: rgba(0,0,0,0.08); color: var(--text); }
 
     /* ── Side panel tabs ────────────────────────────────── */
-    .side-panel-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
-    .side-panel-tab {
-      flex: 1; padding: 10px 8px; cursor: pointer; border: none;
-      background: transparent; font-family: 'Roboto', sans-serif;
-      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-      text-transform: uppercase; color: var(--muted);
-      border-bottom: 2px solid transparent; transition: all 0.2s;
-      display: flex; align-items: center; justify-content: center; gap: 5px;
+    .side-panel-tabs {
+      display: flex; gap: 8px;
+      padding: 14px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      background: #fff; flex-shrink: 0;
     }
-    .side-panel-tab:hover { color: var(--text); background: rgba(0,0,0,0.02); }
-    .side-panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(238,0,51,0.04); }
-    .side-tab-content { display: none; flex: 1; overflow: hidden; min-height: 0; }
+    .side-panel-tab {
+      flex: 1; min-height: 42px; padding: 10px 12px; cursor: pointer; border: none;
+      background: #fff; font-family: 'Roboto', sans-serif;
+      font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #667085;
+      border: 1px solid rgba(0,0,0,0.08); transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      border-radius: 10px;
+      white-space: nowrap; overflow: hidden;
+      box-shadow: none;
+    }
+    .side-panel-tab:hover { color: #334155; background: #fff; }
+    .side-panel-tab.active {
+      color: var(--accent);
+      border-color: rgba(238,0,51,0.24);
+      background: #fff;
+      box-shadow: none;
+    }
+    .side-tab-content {
+      display: none; flex: 1; overflow: hidden; min-height: 0;
+    }
     .side-tab-content.active { display: flex; flex-direction: column; }
 
     /* ── Summary panel ─────────────────────────────────── */
@@ -333,7 +437,7 @@
     .summary-header {
       padding: 8px 12px; border-bottom: 1px solid var(--border);
       display: flex; align-items: center; gap: 8px;
-      background: var(--surface); flex-shrink: 0;
+      background: #fff; flex-shrink: 0;
     }
     .summary-header-title {
       flex: 1; font-family: 'Roboto', sans-serif; font-size: 10px;
@@ -350,15 +454,65 @@
     .summary-lang-toggle.active { background: var(--accent); color: #fff; }
 
     @media (max-width: 780px) {
-      .lecture-body { flex-direction: column; }
-      .next-videos-panel { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 220px; }
+      .lecture-header { padding: 13px 16px; }
+      .lecture-body {
+        display: flex;
+        flex-direction: column;
+      }
+      .lecture-player-side,
+      .lecture-video-wrap,
+      .lecture-meta,
+      .subtitle-panel { width: 100%; }
+      .lecture-body { padding: 0; }
+      .lecture-player-side { margin: 0; max-width: none; transform: none; }
+      .lecture-video-wrap { border-radius: 0; }
+      .next-videos-panel {
+        position: static;
+        top: auto;
+        width: 100%; height: auto; max-height: 220px;
+        border: 1px solid var(--border);
+        background: var(--surface2);
+        box-shadow: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        max-width: 100%;
+      }
+      .next-videos-panel.expanded {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        background: var(--surface2);
+        border-color: var(--border);
+        box-shadow: none;
+      }
+      .next-videos-header,
+      .next-videos-list { opacity: 1; pointer-events: auto; }
+      .side-panel-tabs {
+        flex-direction: row;
+        gap: 0;
+        padding: 0;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+      .side-tab-content { opacity: 1; pointer-events: auto; }
+      .side-panel-tab {
+        min-height: 0;
+        border-radius: 0;
+        border: none;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+      }
+      .side-panel-tab.active {
+        border-color: rgba(238,0,51,0.28);
+        background: rgba(238,0,51,0.04);
+      }
       .next-videos-list { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
       .nv-item { flex-direction: column; min-width: 130px; align-items: stretch; }
       .nv-thumb, .nv-thumb-placeholder { width: 100%; height: 70px; }
     }
 
     /* ── Main area ────────────────────────────────────────────── */
-    .app { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 1280px; }
+    .app { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 18px; width: 100%; max-width: 1880px; }
     .app-main-row { display: flex; gap: 16px; width: 100%; align-items: flex-start; }
     .app-main-left { flex: 1; min-width: 0; display: flex; flex-direction: column; align-self: flex-start; }
     .label {
@@ -436,6 +590,7 @@
     #btn-stop:disabled { opacity: 0.3; cursor: not-allowed; }
     #btn-toggle-lecture { background: rgba(238,0,51,0.10); color: var(--accent3); border: 1px solid rgba(238,0,51,0.2); padding: 11px 14px; font-size: 13px; }
     #btn-toggle-lecture:hover { background: rgba(238,0,51,0.20); }
+    #btn-toggle-lecture { display: none; }
     #btn-widget-mode {
       background: rgba(0,0,0,0.04); color: var(--muted);
       border: 1px solid var(--border); padding: 11px 14px; font-size: 12px;
@@ -580,7 +735,7 @@
       .app-main-left { max-width: none; width: 100%; }
       .right { width: 100%; }
       #chat-log { min-height: 180px; max-height: 240px; }
-      .lecture-wrap { border-radius: 16px; }
+      .lecture-wrap { border-radius: 0; }
       .card { min-height: 0; max-height: none; }
       .card.widget-mode { min-height: 0; }
     }
@@ -698,7 +853,7 @@
 
   <!-- Lecture video panel -->
   <div class="lecture-wrap" id="lecture-wrap">
-    <div class="lecture-header" onclick="toggleLecturePanel()">
+    <div class="lecture-header">
       <span class="lecture-icon">🎬</span>
       <div class="lecture-title" id="lecture-panel-title">
         <span class="lecture-title-prefix">Bài giảng<span class="lecture-title-separator">&nbsp;·&nbsp;</span></span>
@@ -739,45 +894,50 @@
 
       <!-- Side panel with tabs -->
       <div class="next-videos-panel">
-        <div class="side-panel-tabs">
-          <button class="side-panel-tab active" onclick="switchSideTab('videos')" id="tab-btn-videos">📚 Bài giảng</button>
-          <button class="side-panel-tab" onclick="switchSideTab('summary')" id="tab-btn-summary">📝 Tóm tắt</button>
-        </div>
+        <button class="sidebar-menu-toggle" id="sidebar-menu-toggle" type="button" aria-label="Mở thanh bài giảng" aria-expanded="false">
+          <span class="menu-bars"><span></span></span>
+        </button>
+        <div class="sidebar-panel-shell">
+          <div class="side-panel-tabs">
+            <button class="side-panel-tab active" onclick="switchSideTab('videos')" id="tab-btn-videos">📚 Bài giảng</button>
+            <button class="side-panel-tab" onclick="switchSideTab('summary')" id="tab-btn-summary">📝 Tóm tắt</button>
+          </div>
 
-        <!-- Tab 1: Danh sách bài giảng -->
-        <div class="side-tab-content active" id="tab-content-videos">
-          <div class="next-videos-header">
-            <span class="next-videos-header-icon">📋</span>
-            <span class="next-videos-header-title">Danh sách bài giảng</span>
-            <span class="next-videos-header-count" id="nv-count">—</span>
-          </div>
-          <div class="next-videos-list" id="nv-list">
-            <div class="next-videos-state" id="nv-state">
-              <div class="nv-spinner"></div>
-              <span>Đang tải danh sách...</span>
+          <!-- Tab 1: Danh sách bài giảng -->
+          <div class="side-tab-content active" id="tab-content-videos">
+            <div class="next-videos-header">
+              <span class="next-videos-header-icon">📋</span>
+              <span class="next-videos-header-title">Danh sách bài giảng</span>
+              <span class="next-videos-header-count" id="nv-count">—</span>
+            </div>
+            <div class="next-videos-list" id="nv-list">
+              <div class="next-videos-state" id="nv-state">
+                <div class="nv-spinner"></div>
+                <span>Đang tải danh sách...</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Tab 2: Tóm tắt bài giảng -->
-        <div class="side-tab-content" id="tab-content-summary">
-          <div class="summary-header">
-            <span style="font-size:14px">📝</span>
-            <span class="summary-header-title">Ngôn ngữ tóm tắt</span>
-            <button class="summary-lang-toggle active" id="btn-sum-vi" onclick="toggleSummaryLang('vi')">VI</button>
-            <button class="summary-lang-toggle" id="btn-sum-en" onclick="toggleSummaryLang('en')">EN</button>
-          </div>
-          <div id="summary-container">
-            <div class="summary-empty" id="summary-empty">
-              <span class="summary-empty-icon">📝</span>
-              <span class="summary-empty-text">Chọn video rồi bấm nút bên dưới để tóm tắt (cần tải phụ đề trước cho video HeyGen)</span>
-              <button class="btn-summarize" id="btn-summarize" onclick="loadSummary()">Tóm tắt bài giảng</button>
+          <!-- Tab 2: Tóm tắt bài giảng -->
+          <div class="side-tab-content" id="tab-content-summary">
+            <div class="summary-header">
+              <span style="font-size:14px">📝</span>
+              <span class="summary-header-title">Ngôn ngữ tóm tắt</span>
+              <button class="summary-lang-toggle active" id="btn-sum-vi" onclick="toggleSummaryLang('vi')">VI</button>
+              <button class="summary-lang-toggle" id="btn-sum-en" onclick="toggleSummaryLang('en')">EN</button>
             </div>
-            <div class="summary-loading" id="summary-loading" style="display:none">
-              <div class="spinner"></div>
-              <span style="font-size:12px;color:var(--muted)">AI đang tóm tắt bài giảng...</span>
+            <div id="summary-container">
+              <div class="summary-empty" id="summary-empty">
+                <span class="summary-empty-icon">📝</span>
+                <span class="summary-empty-text">Chọn video rồi bấm nút bên dưới để tóm tắt (cần tải phụ đề trước cho video HeyGen)</span>
+                <button class="btn-summarize" id="btn-summarize" onclick="loadSummary()">Tóm tắt bài giảng</button>
+              </div>
+              <div class="summary-loading" id="summary-loading" style="display:none">
+                <div class="spinner"></div>
+                <span style="font-size:12px;color:var(--muted)">AI đang tóm tắt bài giảng...</span>
+              </div>
+              <div class="summary-content" id="summary-content" style="display:none"></div>
             </div>
-            <div class="summary-content" id="summary-content" style="display:none"></div>
           </div>
         </div>
       </div>
@@ -918,7 +1078,9 @@
     const lectureWrap  = document.getElementById("lecture-wrap");
     const lectureBody  = document.getElementById("lecture-body");
     const lecturePlayerSide = document.querySelector(".lecture-player-side");
+    const lectureVideoWrap = document.querySelector(".lecture-video-wrap");
     const nextVideosPanel = document.querySelector(".next-videos-panel");
+    const sidebarMenuToggle = document.getElementById("sidebar-menu-toggle");
     const lectureVid   = document.getElementById("lecture-video");
     const lectureSpeakerTab = document.getElementById("lecture-speaker-tab");
     const nvList       = document.getElementById("nv-list");
@@ -1481,12 +1643,12 @@
     }
 
     function syncLecturePanelHeight() {
-      if (!nextVideosPanel || !lecturePlayerSide) return;
+      if (!nextVideosPanel || !lectureVideoWrap) return;
       if (window.matchMedia('(max-width: 780px)').matches) {
         nextVideosPanel.style.height = '';
         return;
       }
-      const h = lecturePlayerSide.getBoundingClientRect().height;
+      const h = lectureVideoWrap.getBoundingClientRect().height;
       if (h > 0) nextVideosPanel.style.height = `${Math.round(h)}px`;
     }
 
@@ -1784,12 +1946,37 @@
     lectureVid.addEventListener('loadedmetadata', () => requestAnimationFrame(syncLecturePanelHeight));
 
     // ── Side panel tab switching ─────────────────────────────────
+    function toggleSidebar(forceExpand = null) {
+      if (!nextVideosPanel) return;
+      const shouldExpand = forceExpand == null
+        ? !nextVideosPanel.classList.contains('expanded')
+        : forceExpand;
+      nextVideosPanel.classList.toggle('expanded', shouldExpand);
+      if (sidebarMenuToggle) {
+        sidebarMenuToggle.setAttribute('aria-expanded', shouldExpand ? 'true' : 'false');
+      }
+    }
+
     function switchSideTab(tabName) {
+      const nextTabBtn = document.getElementById(`tab-btn-${tabName}`);
       document.querySelectorAll('.side-panel-tab').forEach(btn => btn.classList.remove('active'));
-      document.getElementById(`tab-btn-${tabName}`).classList.add('active');
+      nextTabBtn.classList.add('active');
       document.querySelectorAll('.side-tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-content-${tabName}`).classList.add('active');
+      toggleSidebar(true);
     }
+
+    if (sidebarMenuToggle) {
+      sidebarMenuToggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleSidebar();
+      });
+    }
+
+    document.addEventListener('click', (event) => {
+      if (!nextVideosPanel || nextVideosPanel.contains(event.target)) return;
+      toggleSidebar(false);
+    });
 
     // ── Simple markdown → HTML renderer ─────────────────────────
     function renderMarkdown(md) {
