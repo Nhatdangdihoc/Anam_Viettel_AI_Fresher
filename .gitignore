@@ -38,3 +38,27 @@ Thumbs.db
 # Legacy (sẽ xóa sau khi migrate xong)
 # Backend/
 # Frontend/
+
+
+# Jupyter auto checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# VSCode Tunnel / VSCode Server
+vscode_cli.tar.gz
+vscode-cli/
+vscode-tunnel.log
+.vscode-server/
+.vscode-server-insiders/
+
+# Cloudflare Tunnel
+.cloudflared/
+cloudflared
+cloudflared.log
+
+# Logs
+*.log
+
+# Secrets / keys
+*.pem
+*.key
