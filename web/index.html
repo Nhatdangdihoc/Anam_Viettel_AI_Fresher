@@ -873,16 +873,16 @@
       <!-- Player side -->
       <div class="lecture-player-side">
         <div class="lecture-video-wrap">
-          <video id="lecture-video" controls preload="metadata" src="http://localhost:8000/lecture">
+          <video id="lecture-video" controls preload="metadata" src="/lecture">
             Trình duyệt không hỗ trợ video.
           </video>
         </div>
-        <div class="lecture-meta">
+        <!-- <div class="lecture-meta">
           <span class="lecture-speaker-tab" id="lecture-speaker-tab">PGĐ Học Viện Viettel: DƯƠNG XUÂN PHƯỢNG</span>
           <span class="lecture-meta-tag">Viettel</span>
           <span id="lecture-meta-desc">Giai đoạn 3 · 2010–2020 · Toàn cầu hóa &amp; bứt phá</span>
           <span style="margin-left:auto; color: var(--muted); font-size:11px;">Xem trước khi hỏi Avatar ↓</span>
-        </div>
+        </div> -->
 
         <!-- Subtitle display panel -->
         <div class="subtitle-panel" id="subtitle-panel">
@@ -1055,7 +1055,9 @@
   <div id="toast"></div>
 
   <script>
-    const BASE = "http://localhost:8000";
+    const BASE = window.location.origin;
+    const WS_BASE = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
+
 
     // DOM refs
     const avatar      = document.getElementById("avatar");
@@ -1393,7 +1395,7 @@
       await micCtx.audioWorklet.addModule(wUrl);
       URL.revokeObjectURL(wUrl);
       const actualSampleRate = Math.round(micCtx.sampleRate);
-      const wsUrl = `ws://localhost:8000/stt?sample_rate=${actualSampleRate}&channels=${MIC_CHANNELS}&lang=${langMode}&chunk_ms=3000`;
+      const wsUrl = `${WS_BASE}/stt?sample_rate=${actualSampleRate}&channels=${MIC_CHANNELS}&lang=${langMode}&chunk_ms=3000`;
       micWs = new WebSocket(wsUrl);
       micWs.binaryType = 'arraybuffer';
       micWs.onopen  = () => console.log(`[MIC] WS open (${langMode})`);
@@ -1519,7 +1521,7 @@
 
     function startChat() {
       if (!legacyAvatarEnabled) return;
-      chatWs = new WebSocket('ws://localhost:8000/chat');
+      chatWs = new WebSocket(`${WS_BASE}/chat`);
       chatWs.onmessage = handleChatEvent;
       chatWs.onerror = () => console.warn('Chat WS error');
     }
@@ -1607,7 +1609,7 @@
 
     function startAudio() {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: OUTPUT_SAMPLE_RATE });
-      audioWs  = new WebSocket('ws://localhost:8000/audio');
+      audioWs  = new WebSocket(`${WS_BASE}/audio`);
       audioWs.binaryType = 'arraybuffer';
       let nextTime = 0;
       audioWs.onmessage = (e) => {

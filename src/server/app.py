@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Request
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -232,7 +232,7 @@ async def lecture_video():
 
 
 @app.get("/api/local-videos")
-async def list_local_videos():
+async def list_local_videos(request: Request):
     items = []
     if not VIDEO_ITEMS_DIR.exists():
         return JSONResponse(content={"data": items})
@@ -261,7 +261,7 @@ async def list_local_videos():
         items.append({
             "id": item_dir.name,
             "title": title,
-            "video_url": f"http://localhost:8000/local-video/{item_dir.name}",
+            "video_url": str(request.base_url).rstrip("/") + f"/local-video/{item_dir.name}",
             "size_mb": round(size_mb, 1),
             "has_script": script_file is not None,
             "source": "local",
