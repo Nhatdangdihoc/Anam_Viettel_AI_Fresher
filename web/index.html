@@ -873,7 +873,7 @@
       <!-- Player side -->
       <div class="lecture-player-side">
         <div class="lecture-video-wrap">
-          <video id="lecture-video" controls preload="metadata" src="/lecture">
+          <video id="lecture-video" controls preload="metadata" src="/lecture" loop>
             Trình duyệt không hỗ trợ video.
           </video>
         </div>
@@ -1165,6 +1165,7 @@
     }
 
     function playVideo(video, itemEl) {
+      lectureVid.loop = true;
       lectureVid.src = video.video_url;
       lectureVid.play().catch(() => {});
       setLectureTitle(video.title || '');
